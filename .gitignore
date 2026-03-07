@@ -1,0 +1,75 @@
+# 기본 빌드/IDE 관련
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Gradle ###
+.gradle/
+build/
+.gradle-cache/
+.gradle-build/
+# Gradle 로그 및 잠금 파일
+gradle-app.setting
+gradle.properties
+*.gradle.lockfile
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### MacOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+__MACOSX/
+
+### Spring Boot ###
+# 로그 파일
+*.log
+# 임시 파일
+*.tmp
+# H2 DB 파일 (테스트용)
+*.h2.db
+
+### PostgreSQL ###
+# 로컬 데이터베이스 덤프 파일
+*.sql
+*.dump
+
+### Docker ###
+# 환경 변수 파일
+.env
+# Docker 볼륨/데이터
+docker-data/
+# Docker Compose override (로컬 전용)
+docker-compose.override.yml

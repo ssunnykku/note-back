@@ -42,8 +42,10 @@ public class NoteController {
     // 조회
     @GetMapping("{id}")
     ResponseEntity<NoteResponse> getNote(@PathVariable("id") Long id) {
-        NoteResponse note = noteService.findById(id);
+        NoteResponse note = noteService.getById(id);
         return ResponseEntity.ok().body(note);
     }
+
+    // 삭제
 
 }

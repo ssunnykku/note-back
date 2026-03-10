@@ -36,7 +36,7 @@ public class NoteService {
     }
 
     // 조회
-    public NoteResponse findById(Long id) {
+    public NoteResponse getById(Long id) {
         Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
         NoteResponse noteResponse = NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
                 note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());

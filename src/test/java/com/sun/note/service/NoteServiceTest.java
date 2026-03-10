@@ -92,7 +92,7 @@ public class NoteServiceTest {
     void testFindByIdException() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.findById(1L))
+        assertThatThrownBy(() -> noteService.getById(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
 

@@ -32,6 +32,18 @@ docker compose down
 docker compose restart app
 ```
 
+### 로그 확인
+
+```bash
+docker compose logs -f app
+```
+
+### DB 접속
+
+```bash
+docker exec -it postgres-db psql -U postgres -d note
+```
+
 ### 접속 정보
 
 | 항목 | 내용 |

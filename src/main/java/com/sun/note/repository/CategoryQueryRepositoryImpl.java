@@ -14,27 +14,28 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
-    private final JPAQueryFactory queryFactory;
+        private final JPAQueryFactory queryFactory;
 
-    @Override
-    public List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId) {
-        QCategory category = QCategory.category;
-        QNote note = QNote.note;
+        @Override
+        public List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId) {
+                QCategory category = QCategory.category;
+                QNote note = QNote.note;
 
-        return queryFactory
-                .from(category)
-                .leftJoin(note).on(note.categoryId.eq(category.id))
-                .transform(GroupBy.groupBy(category.id)
-                        .list(Projections.constructor(CategoryNoteDto.class,
-                                category.id,
-                                category.name,
-                                GroupBy.list(Projections.constructor(CategoryNoteDto.NoteDto.class,
-                                        note.id,
-                                        note.userId,
-                                        note.title,
-                                        note.content,
-                                        note.createdAt,
-                                        note.updatedAt)))));
-    }
+                return queryFactory
+                                .from(category)
+                                .leftJoin(note).on(note.categoryId.eq(category.id))
+                                .transform(GroupBy.groupBy(category.id)
+                                                .list(Projections.constructor(CategoryNoteDto.class,
+                                                                category.id,
+                                                                category.name,
+                                                                GroupBy.list(Projections.constructor(
+                                                                                CategoryNoteDto.NoteDto.class,
+                                                                                note.id,
+                                                                                note.userId,
+                                                                                note.title,
+                                                                                note.content,
+                                                                                note.createdAt,
+                                                                                note.updatedAt)))));
+        }
 
 }

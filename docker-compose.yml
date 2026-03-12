@@ -12,3 +12,23 @@ services:
     volumes:
       - ./docker-data/db:/var/lib/postgresql/data
 
+  app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: note-app
+    ports:
+      - '8080:8080'
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/note
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DOCKER_COMPOSE_ENABLED: false
+
+volumes:
+  gradle-cache:

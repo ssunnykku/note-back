@@ -61,18 +61,20 @@ public class NoteServiceTest {
     }
 
     @Test
+    @DisplayName("노트 수정")
     void testEditNote() {
         // given
         Note note = createNote();
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // when
-        noteService.editNote(note.getId(), 2L, "첫번째 노트 수정", "#내용 수정");
+        NoteResponse result = noteService.editNote(note.getId(), 2L, "첫번째 노트 수정", "#내용 수정");
 
         // then
-        assertThat(note.getCategoryId()).isEqualTo(2L);
-        assertThat(note.getTitle()).isEqualTo("첫번째 노트 수정");
-        assertThat(note.getContent()).isEqualTo("#내용 수정");
+        assertThat(result).isNotNull();
+        assertThat(result.categoryId()).isEqualTo(2L);
+        assertThat(result.title()).isEqualTo("첫번째 노트 수정");
+        assertThat(result.content()).isEqualTo("#내용 수정");
 
     }
 

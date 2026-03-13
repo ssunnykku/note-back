@@ -30,9 +30,11 @@ public class NoteService {
 
     // 수정
     @Transactional
-    public void editNote(Long id, Long categoryId, String title, String content) {
+    public NoteResponse editNote(Long id, Long categoryId, String title, String content) {
         Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
         note.edit(categoryId, title, content);
+        return NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
+                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
     }
 
     // 조회

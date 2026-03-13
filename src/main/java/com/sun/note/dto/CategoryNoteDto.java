@@ -9,13 +9,13 @@ public record CategoryNoteDto(Long id, String categoryName, List<NoteDto> notes)
         return new CategoryNoteDto(id, categoryName, notes);
     }
 
-    public record NoteDto(Long id, UUID userId, String title, String content, LocalDateTime createdAt,
+    public record NoteDto(Long id, UUID userId, String title, LocalDateTime createdAt,
             LocalDateTime updatedAt) {
 
-        public static NoteDto of(Long id, UUID userId, String title, String content,
+        public static NoteDto of(Long id, UUID userId, String title,
                 LocalDateTime createdAt,
                 LocalDateTime updatedAt) {
-            return new NoteDto(id, userId, title, content, createdAt, updatedAt);
+            return new NoteDto(id, userId, title, createdAt, updatedAt);
         }
 
     }

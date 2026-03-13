@@ -46,7 +46,7 @@ docker exec -it postgres-db psql -U postgres -d note
 
 ### 접속 정보
 
-| 항목 | 내용 |
-|------|------|
-| 앱 | `http://localhost:8080` |
-| DB | `localhost:55432` (postgres / postgres) |
+| 항목 | 내용                                    |
+| ---- | --------------------------------------- |
+| 앱   | `http://localhost:8080`                 |
+| DB   | `localhost:55432` (postgres / postgres) |

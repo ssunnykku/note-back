@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/notes")
+@RequestMapping("/api/notes")
 public class NoteController {
     private final NoteService noteService;
 
@@ -34,9 +34,9 @@ public class NoteController {
 
     // 수정
     @PutMapping("{id}")
-    ResponseEntity<Void> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto) {
-        noteService.editNote(id, dto.categoryId(), dto.title(), dto.content());
-        return ResponseEntity.noContent().build();
+    ResponseEntity<NoteResponse> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto) {
+        NoteResponse note = noteService.editNote(id, dto.categoryId(), dto.title(), dto.content());
+        return ResponseEntity.ok(note);
     }
 
     // 조회

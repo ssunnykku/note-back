@@ -45,4 +45,11 @@ public class NoteService {
         return noteResponse;
     }
 
+    // 삭제
+    @Transactional
+    public void deleteNote(Long id) {
+        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        noteRepository.delete(note);
+    }
+
 }

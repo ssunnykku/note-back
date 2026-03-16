@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -98,6 +99,30 @@ public class NoteServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
 
+    }
+
+    @Test
+    @DisplayName("노트 삭제")
+    void testDeleteNote() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // when
+        noteService.deleteNote(1L);
+
+        // then
+        verify(noteRepository).delete(note);
+    }
+
+    @Test
+    @DisplayName("노트 데이터가 없으면 예외처리(삭제)")
+    void testDeleteNoteException() {
+        when(noteRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> noteService.deleteNote(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }
 
 }

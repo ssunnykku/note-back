@@ -17,6 +17,7 @@ import com.sun.note.service.NoteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
@@ -47,5 +48,10 @@ public class NoteController {
     }
 
     // 삭제
+    @DeleteMapping("{id}")
+    ResponseEntity<Void> deleteNote(@PathVariable("id") Long id) {
+        noteService.deleteNote(id);
+        return ResponseEntity.noContent().build();
+    }
 
 }

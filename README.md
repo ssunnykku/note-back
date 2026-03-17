@@ -44,6 +44,20 @@ docker compose logs -f app
 docker exec -it postgres-db psql -U postgres -d note
 ```
 
+### 테스트 실행
+
+전체 테스트 실행:
+
+```bash
+docker exec note-app ./gradlew test
+```
+
+특정 테스트 클래스만 실행:
+
+```bash
+docker exec note-app ./gradlew test --tests "com.sun.note.controller.NoteControllerTest"
+```
+
 ### 접속 정보
 
 | 항목 | 내용                                    |

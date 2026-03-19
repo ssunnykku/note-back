@@ -3,15 +3,21 @@ package com.sun.note.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sun.note.dto.CategoryNoteDto;
+import com.sun.note.dto.CategoryResponse;
+import com.sun.note.dto.CreateCategoryRequest;
 import com.sun.note.service.CategoryService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -19,6 +25,13 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/categories")
 public class CategoryController {
     private final CategoryService categoryService;
+
+    // 생성
+    @PostMapping
+    ResponseEntity<CategoryResponse> addCategory(@Valid @RequestBody CreateCategoryRequest dto) {
+        CategoryResponse category = categoryService.addCategory(dto.name());
+        return ResponseEntity.status(HttpStatus.CREATED).body(category);
+    }
 
     // 조회(리스트)
     @GetMapping("{userId}/notes")

@@ -27,4 +27,8 @@ public class Category {
                 .build();
     }
 
+    public void editName(String name) {
+        this.name = name;
+    }
+
 }

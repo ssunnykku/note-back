@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sun.note.dto.CategoryNoteDto;
@@ -45,8 +46,10 @@ public class CategoryController {
 
     // 조회(리스트)
     @GetMapping("{userId}/notes")
-    ResponseEntity<List<CategoryNoteDto>> getNoteList(@PathVariable("userId") UUID userId) {
-        List<CategoryNoteDto> list = categoryService.getNoteList(userId);
+    ResponseEntity<List<CategoryNoteDto>> getNoteList(
+            @PathVariable("userId") UUID userId,
+            @RequestParam(value = "deleted", defaultValue = "false") boolean deleted) {
+        List<CategoryNoteDto> list = categoryService.getNoteList(userId, deleted);
         return ResponseEntity.ok().body(list);
     }
 

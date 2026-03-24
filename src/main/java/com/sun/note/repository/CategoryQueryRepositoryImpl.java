@@ -19,7 +19,7 @@ public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
         private final JPAQueryFactory queryFactory;
 
         @Override
-        public List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId) {
+        public List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId, boolean deleted) {
                 QCategory category = QCategory.category;
                 QNote note = QNote.note;
 
@@ -27,7 +27,9 @@ public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
                 .select(category.id, category.name,
                         note.id, note.userId, note.title, note.createdAt, note.updatedAt)
                 .from(category)
-                .leftJoin(note).on(note.categoryId.eq(category.id).and(note.userId.eq(userId)))
+                .leftJoin(note).on(note.categoryId.eq(category.id)
+                        .and(note.userId.eq(userId))
+                        .and(note.deleted.eq(deleted)))
                 .orderBy(category.id.asc())
                 .fetch();
 

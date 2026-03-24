@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 @RestController
 @RequiredArgsConstructor
@@ -47,10 +48,24 @@ public class NoteController {
         return ResponseEntity.ok().body(note);
     }
 
-    // 삭제
+    // 휴지통으로 이동 (soft delete)
     @DeleteMapping("{id}")
-    ResponseEntity<Void> deleteNote(@PathVariable("id") Long id) {
-        noteService.deleteNote(id);
+    ResponseEntity<Void> softDeleteNote(@PathVariable("id") Long id) {
+        noteService.softDelete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 복원
+    @PatchMapping("{id}/restore")
+    ResponseEntity<Void> restoreNote(@PathVariable("id") Long id) {
+        noteService.restore(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 완전 삭제 (hard delete)
+    @DeleteMapping("{id}/permanent")
+    ResponseEntity<Void> permanentDeleteNote(@PathVariable("id") Long id) {
+        noteService.permanentDelete(id);
         return ResponseEntity.noContent().build();
     }
 

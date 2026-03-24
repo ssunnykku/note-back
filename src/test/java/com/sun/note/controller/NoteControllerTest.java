@@ -24,6 +24,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -160,13 +161,13 @@ class NoteControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/notes/{id} - 노트 삭제")
-    class DeleteNote {
+    @DisplayName("DELETE /api/notes/{id} - 휴지통으로 이동")
+    class SoftDeleteNote {
 
         @Test
         @DisplayName("존재하는 노트면 204 No Content 반환")
-        void deleteNote_success() throws Exception {
-            doNothing().when(noteService).deleteNote(1L);
+        void softDelete_success() throws Exception {
+            doNothing().when(noteService).softDelete(1L);
 
             mockMvc.perform(delete("/api/notes/1"))
                     .andExpect(status().isNoContent());
@@ -174,12 +175,90 @@ class NoteControllerTest {
 
         @Test
         @DisplayName("존재하지 않는 노트면 404 반환")
-        void deleteNote_notFound() throws Exception {
+        void softDelete_notFound() throws Exception {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
-                    .when(noteService).deleteNote(999L);
+                    .when(noteService).softDelete(999L);
 
             mockMvc.perform(delete("/api/notes/999"))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("이미 삭제된 노트면 400 반환")
+        void softDelete_alreadyDeleted() throws Exception {
+            doThrow(new BusinessException(ErrorCode.ALREADY_DELETED))
+                    .when(noteService).softDelete(1L);
+
+            mockMvc.perform(delete("/api/notes/1"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/notes/{id}/restore - 노트 복원")
+    class RestoreNote {
+
+        @Test
+        @DisplayName("삭제된 노트면 204 No Content 반환")
+        void restore_success() throws Exception {
+            doNothing().when(noteService).restore(1L);
+
+            mockMvc.perform(patch("/api/notes/1/restore"))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 노트면 404 반환")
+        void restore_notFound() throws Exception {
+            doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
+                    .when(noteService).restore(999L);
+
+            mockMvc.perform(patch("/api/notes/999/restore"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("삭제되지 않은 노트면 400 반환")
+        void restore_notDeleted() throws Exception {
+            doThrow(new BusinessException(ErrorCode.NOT_DELETED))
+                    .when(noteService).restore(1L);
+
+            mockMvc.perform(patch("/api/notes/1/restore"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/notes/{id}/permanent - 완전 삭제")
+    class PermanentDeleteNote {
+
+        @Test
+        @DisplayName("휴지통에 있는 노트면 204 No Content 반환")
+        void permanentDelete_success() throws Exception {
+            doNothing().when(noteService).permanentDelete(1L);
+
+            mockMvc.perform(delete("/api/notes/1/permanent"))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 노트면 404 반환")
+        void permanentDelete_notFound() throws Exception {
+            doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
+                    .when(noteService).permanentDelete(999L);
+
+            mockMvc.perform(delete("/api/notes/999/permanent"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("삭제되지 않은 노트면 400 반환")
+        void permanentDelete_notDeleted() throws Exception {
+            doThrow(new BusinessException(ErrorCode.NOT_DELETED))
+                    .when(noteService).permanentDelete(1L);
+
+            mockMvc.perform(delete("/api/notes/1/permanent"))
+                    .andExpect(status().isBadRequest());
         }
     }
 

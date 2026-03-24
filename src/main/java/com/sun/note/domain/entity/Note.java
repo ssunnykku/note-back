@@ -48,6 +48,12 @@ public class Note {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
     public static Note of() {
         return Note.builder().build();
     };
@@ -75,6 +81,16 @@ public class Note {
         this.categoryId = categoryId;
         this.title = title;
         this.content = content;
+    }
+
+    public void softDelete() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void restore() {
+        this.deleted = false;
+        this.deletedAt = null;
     }
 
 }

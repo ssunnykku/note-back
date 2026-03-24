@@ -102,25 +102,135 @@ public class NoteServiceTest {
     }
 
     @Test
-    @DisplayName("노트 삭제")
-    void testDeleteNote() {
+    @DisplayName("삭제된 노트 조회 시 예외처리")
+    void testGetDeletedNoteException() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.getById(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("삭제된 노트 수정 시 예외처리")
+    void testEditDeletedNoteException() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("노트 soft delete")
+    void testSoftDelete() {
         // given
         Note note = createNote();
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // when
-        noteService.deleteNote(1L);
+        noteService.softDelete(1L);
+
+        // then
+        assertThat(note.getDeleted()).isTrue();
+        assertThat(note.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("이미 삭제된 노트 soft delete 시 예외처리")
+    void testSoftDeleteAlreadyDeleted() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.softDelete(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ALREADY_DELETED.getMessage());
+    }
+
+    @Test
+    @DisplayName("노트 데이터가 없으면 예외처리(soft delete)")
+    void testSoftDeleteNotFound() {
+        when(noteRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> noteService.softDelete(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("노트 복원")
+    void testRestore() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // when
+        noteService.restore(1L);
+
+        // then
+        assertThat(note.getDeleted()).isFalse();
+        assertThat(note.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("삭제되지 않은 노트 복원 시 예외처리")
+    void testRestoreNotDeleted() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.restore(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.NOT_DELETED.getMessage());
+    }
+
+    @Test
+    @DisplayName("노트 완전 삭제")
+    void testPermanentDelete() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // when
+        noteService.permanentDelete(1L);
 
         // then
         verify(noteRepository).delete(note);
     }
 
     @Test
-    @DisplayName("노트 데이터가 없으면 예외처리(삭제)")
-    void testDeleteNoteException() {
+    @DisplayName("삭제되지 않은 노트 완전 삭제 시 예외처리")
+    void testPermanentDeleteNotDeleted() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.permanentDelete(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.NOT_DELETED.getMessage());
+    }
+
+    @Test
+    @DisplayName("노트 데이터가 없으면 예외처리(완전 삭제)")
+    void testPermanentDeleteNotFound() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.deleteNote(1L))
+        assertThatThrownBy(() -> noteService.permanentDelete(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }

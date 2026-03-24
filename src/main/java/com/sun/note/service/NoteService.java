@@ -31,7 +31,7 @@ public class NoteService {
     // 수정
     @Transactional
     public NoteResponse editNote(Long id, Long categoryId, String title, String content) {
-        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        Note note = findActiveNote(id);
         note.edit(categoryId, title, content);
         return NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
                 note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
@@ -39,17 +39,47 @@ public class NoteService {
 
     // 조회
     public NoteResponse getById(Long id) {
-        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-        NoteResponse noteResponse = NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
+        Note note = findActiveNote(id);
+        return NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
                 note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
-        return noteResponse;
     }
 
-    // 삭제
+    // 휴지통으로 이동 (soft delete)
     @Transactional
-    public void deleteNote(Long id) {
+    public void softDelete(Long id) {
         Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (note.getDeleted()) {
+            throw new BusinessException(ErrorCode.ALREADY_DELETED);
+        }
+        note.softDelete();
+    }
+
+    // 복원
+    @Transactional
+    public void restore(Long id) {
+        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!note.getDeleted()) {
+            throw new BusinessException(ErrorCode.NOT_DELETED);
+        }
+        note.restore();
+    }
+
+    // 완전 삭제 (hard delete)
+    @Transactional
+    public void permanentDelete(Long id) {
+        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!note.getDeleted()) {
+            throw new BusinessException(ErrorCode.NOT_DELETED);
+        }
         noteRepository.delete(note);
+    }
+
+    private Note findActiveNote(Long id) {
+        Note note = noteRepository.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (note.getDeleted()) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return note;
     }
 
 }

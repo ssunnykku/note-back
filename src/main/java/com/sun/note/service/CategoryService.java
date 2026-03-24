@@ -14,8 +14,8 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     // 리스트 조회
-    public List<CategoryNoteDto> getNoteList(UUID userId) {
-        List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotesByUserId(userId);
+    public List<CategoryNoteDto> getNoteList(UUID userId, boolean deleted) {
+        List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotesByUserId(userId, deleted);
         return noteList;
     }
 }

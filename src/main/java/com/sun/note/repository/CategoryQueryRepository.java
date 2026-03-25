@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CategoryQueryRepository {
-    List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId, boolean deleted);
-
+    List<CategoryNoteDto> findCategoriesNotes(UUID userId, boolean deleted);
+    
 }

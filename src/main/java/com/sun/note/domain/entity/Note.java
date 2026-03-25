@@ -31,7 +31,6 @@ public class Note {
     @NotNull
     private UUID userId;
 
-    @NotNull
     private Long categoryId;
 
     @NotNull

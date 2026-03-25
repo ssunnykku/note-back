@@ -19,7 +19,7 @@ public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
         private final JPAQueryFactory queryFactory;
 
         @Override
-        public List<CategoryNoteDto> findCategoriesNotesByUserId(UUID userId, boolean deleted) {
+        public List<CategoryNoteDto> findCategoriesNotes(UUID userId, boolean deleted) {
                 QCategory category = QCategory.category;
                 QNote note = QNote.note;
 
@@ -55,4 +55,5 @@ public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
                 })
                 .toList();
     }
+
 }

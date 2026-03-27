@@ -28,4 +28,21 @@ public record NoteResponse(
                 createdAt,
                 updatedAt);
     }
+
+       public static NoteResponse of(
+            Long id,
+            UUID userId,
+            Long categoryId,
+            String title,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
+        return new NoteResponse(
+                id,
+                userId,
+                categoryId,
+                title,
+                null,
+                createdAt,
+                updatedAt);
+    }
 }

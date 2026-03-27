@@ -58,11 +58,11 @@ public class CategoryController {
 
     // 노트 리스트 조회 by categoryId
     @GetMapping("{userId}")
-    ResponseEntity<List<NoteResponse>> getNoteListbyCategoryId(
+    ResponseEntity<List<NoteResponse>> getNoteListByCategoryId(
             @PathVariable("userId") UUID userId,
-            @RequestParam(value = "categoryId") Long categoryId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "deleted", defaultValue = "false") boolean deleted) {
-        List<NoteResponse> note = categoryNoteService.getNoteListbyCategoryId(userId, categoryId, deleted);
+        List<NoteResponse> note = categoryNoteService.getNoteListByCategoryId(userId, categoryId, deleted);
         return ResponseEntity.ok().body(note);
     }
 

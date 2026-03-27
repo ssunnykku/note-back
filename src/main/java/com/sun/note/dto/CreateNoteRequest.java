@@ -12,6 +12,10 @@ public record CreateNoteRequest(
         @NotBlank @Size(max = 255) String title,
         @NotBlank @Size(max = 100000) String content
 ) {
+    
+    public static CreateNoteRequest of(UUID userId, String title, String content) {
+        return new CreateNoteRequest(userId, null, title, content);
+    }
 
     public static CreateNoteRequest of(UUID userId, Long categoryId, String title, String content) {
         return new CreateNoteRequest(userId, categoryId, title, content);

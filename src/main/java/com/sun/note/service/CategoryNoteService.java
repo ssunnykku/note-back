@@ -26,7 +26,7 @@ public class CategoryNoteService {
     }
 
     // 특정 카테고리의 노트 리스트 조회
-    public List<NoteResponse> getNoteListbyCategoryId(UUID userId, Long categoryId, boolean deleted) {
+    public List<NoteResponse> getNoteListByCategoryId(UUID userId, Long categoryId, boolean deleted) {
         List<Note> noteList = noteRepository.findByUserIdAndCategoryIdAndDeleted(userId, categoryId, deleted);
         
         List<NoteResponse> response = noteList
@@ -34,7 +34,6 @@ public class CategoryNoteService {
                 .map(note -> 
                 NoteResponse.of(note.getId(), note.getUserId(),
                         note.getCategoryId(), note.getTitle(),
-                        note.getContent(),
                         note.getCreatedAt(),
                         note.getUpdatedAt())).toList();
         return response;

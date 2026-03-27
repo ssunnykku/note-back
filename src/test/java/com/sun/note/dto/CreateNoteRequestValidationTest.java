@@ -55,12 +55,11 @@ class CreateNoteRequestValidationTest {
     class CategoryIdValidation {
 
         @Test
-        @DisplayName("null이면 실패")
+        @DisplayName("null이어도 성공(미분류 노트)")
         void nullCategoryId() {
             var request = CreateNoteRequest.of(VALID_USER_ID, null, VALID_TITLE, VALID_CONTENT);
             Set<ConstraintViolation<CreateNoteRequest>> violations = validator.validate(request);
-            assertThat(violations).hasSize(1);
-            assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("categoryId");
+            assertThat(violations).isEmpty();
         }
     }
 

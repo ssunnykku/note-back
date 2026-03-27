@@ -18,6 +18,8 @@ import com.sun.note.dto.CategoryNoteDto;
 import com.sun.note.dto.CategoryResponse;
 import com.sun.note.dto.CreateCategoryRequest;
 import com.sun.note.dto.EditCategoryRequest;
+import com.sun.note.dto.NoteResponse;
+import com.sun.note.service.CategoryNoteService;
 import com.sun.note.service.CategoryService;
 
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/categories")
 public class CategoryController {
     private final CategoryService categoryService;
+    private final CategoryNoteService categoryNoteService;
 
     // 생성
     @PostMapping
@@ -49,8 +52,18 @@ public class CategoryController {
     ResponseEntity<List<CategoryNoteDto>> getNoteList(
             @PathVariable("userId") UUID userId,
             @RequestParam(value = "deleted", defaultValue = "false") boolean deleted) {
-        List<CategoryNoteDto> list = categoryService.getNoteList(userId, deleted);
+        List<CategoryNoteDto> list = categoryNoteService.getNoteList(userId, deleted);
         return ResponseEntity.ok().body(list);
+    }
+
+    // 노트 리스트 조회 by categoryId
+    @GetMapping("{userId}")
+    ResponseEntity<List<NoteResponse>> getNoteListByCategoryId(
+            @PathVariable("userId") UUID userId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "deleted", defaultValue = "false") boolean deleted) {
+        List<NoteResponse> note = categoryNoteService.getNoteListByCategoryId(userId, categoryId, deleted);
+        return ResponseEntity.ok().body(note);
     }
 
 }

@@ -62,6 +62,26 @@ public class NoteServiceTest {
     }
 
     @Test
+    @DisplayName("노트 생성(카테고리 미분류)")
+    void testAddNoteWithoutCategory() {
+        // given
+        Note noteResult = Note.of(1L, USER_ID, null, TITLE, CONTENT);
+
+        when(noteRepository.save(any(Note.class))).thenReturn(noteResult);
+
+        // when
+        NoteResponse result = noteService.addNote(USER_ID, null, TITLE, CONTENT);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.userId()).isEqualTo(UUID.fromString("2013a306-9369-46ba-ac55-2f547ac5c50f"));
+        assertThat(result.categoryId()).isEqualTo(null);
+        assertThat(result.title()).isEqualTo("첫번째 노트");
+        assertThat(result.content()).isEqualTo("#내용");
+
+    }
+
+    @Test
     @DisplayName("노트 수정")
     void testEditNote() {
         // given

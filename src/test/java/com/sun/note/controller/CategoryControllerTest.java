@@ -10,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.sun.note.dto.CategoryResponse;
+import com.sun.note.service.CategoryNoteService;
 import com.sun.note.service.CategoryService;
 
 import com.sun.note.exception.BusinessException;
@@ -31,6 +32,9 @@ class CategoryControllerTest {
 
     @MockBean
     private CategoryService categoryService;
+
+    @MockBean
+    private CategoryNoteService categoryNoteService;
 
     private static final String NAME = "일상";
 

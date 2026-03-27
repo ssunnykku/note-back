@@ -1,10 +1,8 @@
 package com.sun.note.service;
 
-import java.util.*;
 import org.springframework.stereotype.Service;
 
 import com.sun.note.domain.entity.Category;
-import com.sun.note.dto.CategoryNoteDto;
 import com.sun.note.dto.CategoryResponse;
 import com.sun.note.exception.BusinessException;
 import com.sun.note.exception.ErrorCode;
@@ -34,9 +32,5 @@ public class CategoryService {
         return CategoryResponse.of(category.getId(), category.getName());
     }
 
-    // 리스트 조회
-    public List<CategoryNoteDto> getNoteList(UUID userId, boolean deleted) {
-        List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotesByUserId(userId, deleted);
-        return noteList;
-    }
+
 }

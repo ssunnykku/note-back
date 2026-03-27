@@ -19,6 +19,7 @@ import com.sun.note.service.NoteService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -55,8 +56,32 @@ class NoteControllerTest {
     class AddNote {
 
         @Test
-        @DisplayName("유효한 요청이면 201 Created 반환")
+        @DisplayName("유효한 요청이면 201 Created 반환(categoryId 입력x)")
         void addNote_success() throws Exception {
+                when(noteService.addNote(any(UUID.class), isNull(), any(String.class), any(String.class)))
+                                .thenReturn(createNoteResponse());
+
+                String body = """
+                                {
+                                    "userId": "%s",
+                                    "title": "%s",
+                                    "content": "%s"
+                                }
+                                """.formatted(USER_ID, TITLE, CONTENT);
+
+                mockMvc.perform(post("/api/notes")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.id").value(1))
+                                .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
+                                .andExpect(jsonPath("$.title").value(TITLE))
+                                .andExpect(jsonPath("$.content").value(CONTENT));
+        }
+        
+        @Test
+        @DisplayName("유효한 요청이면 201 Created 반환")
+        void addNote_success_withoutCategory() throws Exception {
             when(noteService.addNote(any(UUID.class), any(Long.class), any(String.class), any(String.class)))
                     .thenReturn(createNoteResponse());
 
@@ -285,22 +310,6 @@ class NoteControllerTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Test
-        @DisplayName("categoryId가 null이면 400 반환")
-        void nullCategoryId() throws Exception {
-            String body = """
-                    {
-                        "userId": "%s",
-                        "title": "제목",
-                        "content": "내용"
-                    }
-                    """.formatted(USER_ID);
-
-            mockMvc.perform(post("/api/notes")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest());
-        }
 
         @Test
         @DisplayName("title이 빈 문자열이면 400 반환")

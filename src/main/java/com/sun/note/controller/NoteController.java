@@ -1,7 +1,10 @@
 package com.sun.note.controller;
 
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,8 +32,9 @@ public class NoteController {
 
     // 생성
     @PostMapping
-    ResponseEntity<NoteResponse> addNote(@Valid @RequestBody CreateNoteRequest dto) {
-        NoteResponse note = noteService.addNote(dto.userId(), dto.categoryId(), dto.title(), dto.content());
+    ResponseEntity<NoteResponse> addNote(@Valid @RequestBody CreateNoteRequest dto, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        NoteResponse note = noteService.addNote(userId, dto.categoryId(), dto.title(), dto.content());
         return ResponseEntity.status(HttpStatus.CREATED).body(note);
     }
 

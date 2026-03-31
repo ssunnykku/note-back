@@ -29,7 +29,7 @@ public record NoteResponse(
                 updatedAt);
     }
 
-       public static NoteResponse of(
+    public static NoteResponse of(
             Long id,
             UUID userId,
             Long categoryId,

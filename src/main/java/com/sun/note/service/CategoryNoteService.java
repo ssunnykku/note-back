@@ -21,21 +21,22 @@ public class CategoryNoteService {
 
     // 카테고리별 노트 리스트 조회(전체)
     public List<CategoryNoteDto> getNoteList(UUID userId, boolean deleted) {
-         List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotes(userId, deleted);
+        List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotes(userId, deleted);
         return noteList;
     }
 
     // 특정 카테고리의 노트 리스트 조회
     public List<NoteResponse> getNoteListByCategoryId(UUID userId, Long categoryId, boolean deleted) {
         List<Note> noteList = noteRepository.findByUserIdAndCategoryIdAndDeleted(userId, categoryId, deleted);
-        
+
         List<NoteResponse> response = noteList
                 .stream()
-                .map(note -> 
-                NoteResponse.of(note.getId(), note.getUserId(),
+                .map(note -> NoteResponse.of(note.getId(), note.getUserId(),
                         note.getCategoryId(), note.getTitle(),
                         note.getCreatedAt(),
-                        note.getUpdatedAt())).toList();
+                        note.getUpdatedAt()))
+                .toList();
         return response;
     }
+
 }

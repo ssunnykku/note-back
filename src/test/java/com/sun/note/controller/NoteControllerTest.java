@@ -9,12 +9,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.sun.note.config.SecurityConfig;
 import com.sun.note.dto.NoteResponse;
 import com.sun.note.exception.BusinessException;
 import com.sun.note.exception.ErrorCode;
+import com.sun.note.filter.JwtFilter;
 import com.sun.note.service.NoteService;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -23,6 +28,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -31,7 +37,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(NoteController.class)
+@WebMvcTest(value = NoteController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                SecurityConfig.class, JwtFilter.class }))
+@WithMockUser(username = "2013a306-9369-46ba-ac55-2f547ac5c50f")
 class NoteControllerTest {
 
     @Autowired
@@ -63,13 +71,13 @@ class NoteControllerTest {
 
                 String body = """
                                 {
-                                    "userId": "%s",
                                     "title": "%s",
                                     "content": "%s"
                                 }
-                                """.formatted(USER_ID, TITLE, CONTENT);
+                                """.formatted(TITLE, CONTENT);
 
                 mockMvc.perform(post("/api/notes")
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(body))
                                 .andExpect(status().isCreated())
@@ -86,15 +94,15 @@ class NoteControllerTest {
                     .thenReturn(createNoteResponse());
 
             String body = """
-                    {
-                        "userId": "%s",
+                            {
                         "categoryId": %d,
                         "title": "%s",
                         "content": "%s"
                     }
-                    """.formatted(USER_ID, CATEGORY_ID, TITLE, CONTENT);
+                            """.formatted(CATEGORY_ID, TITLE, CONTENT);
 
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated())
@@ -126,6 +134,7 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(put("/api/notes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isOk())
@@ -152,6 +161,7 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(put("/api/notes/999")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isNotFound());
@@ -194,7 +204,7 @@ class NoteControllerTest {
         void softDelete_success() throws Exception {
             doNothing().when(noteService).softDelete(1L);
 
-            mockMvc.perform(delete("/api/notes/1"))
+            mockMvc.perform(delete("/api/notes/1").with(csrf()))
                     .andExpect(status().isNoContent());
         }
 
@@ -204,7 +214,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
                     .when(noteService).softDelete(999L);
 
-            mockMvc.perform(delete("/api/notes/999"))
+            mockMvc.perform(delete("/api/notes/999").with(csrf()))
                     .andExpect(status().isNotFound());
         }
 
@@ -214,7 +224,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.ALREADY_DELETED))
                     .when(noteService).softDelete(1L);
 
-            mockMvc.perform(delete("/api/notes/1"))
+            mockMvc.perform(delete("/api/notes/1").with(csrf()))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -228,7 +238,7 @@ class NoteControllerTest {
         void restore_success() throws Exception {
             doNothing().when(noteService).restore(1L);
 
-            mockMvc.perform(patch("/api/notes/1/restore"))
+            mockMvc.perform(patch("/api/notes/1/restore").with(csrf()))
                     .andExpect(status().isNoContent());
         }
 
@@ -238,7 +248,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
                     .when(noteService).restore(999L);
 
-            mockMvc.perform(patch("/api/notes/999/restore"))
+            mockMvc.perform(patch("/api/notes/999/restore").with(csrf()))
                     .andExpect(status().isNotFound());
         }
 
@@ -248,7 +258,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.NOT_DELETED))
                     .when(noteService).restore(1L);
 
-            mockMvc.perform(patch("/api/notes/1/restore"))
+            mockMvc.perform(patch("/api/notes/1/restore").with(csrf()))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -262,7 +272,7 @@ class NoteControllerTest {
         void permanentDelete_success() throws Exception {
             doNothing().when(noteService).permanentDelete(1L);
 
-            mockMvc.perform(delete("/api/notes/1/permanent"))
+            mockMvc.perform(delete("/api/notes/1/permanent").with(csrf()))
                     .andExpect(status().isNoContent());
         }
 
@@ -272,7 +282,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
                     .when(noteService).permanentDelete(999L);
 
-            mockMvc.perform(delete("/api/notes/999/permanent"))
+            mockMvc.perform(delete("/api/notes/999/permanent").with(csrf()))
                     .andExpect(status().isNotFound());
         }
 
@@ -282,7 +292,7 @@ class NoteControllerTest {
             doThrow(new BusinessException(ErrorCode.NOT_DELETED))
                     .when(noteService).permanentDelete(1L);
 
-            mockMvc.perform(delete("/api/notes/1/permanent"))
+            mockMvc.perform(delete("/api/notes/1/permanent").with(csrf()))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -294,36 +304,18 @@ class NoteControllerTest {
     class AddNoteValidation {
 
         @Test
-        @DisplayName("userId가 null이면 400 반환")
-        void nullUserId() throws Exception {
-            String body = """
-                    {
-                        "categoryId": 1,
-                        "title": "제목",
-                        "content": "내용"
-                    }
-                    """;
-
-            mockMvc.perform(post("/api/notes")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest());
-        }
-
-
-        @Test
         @DisplayName("title이 빈 문자열이면 400 반환")
         void blankTitle() throws Exception {
             String body = """
-                    {
-                        "userId": "%s",
+                            {
                         "categoryId": 1,
                         "title": "   ",
                         "content": "내용"
                     }
-                    """.formatted(USER_ID);
+                            """;
 
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -334,14 +326,14 @@ class NoteControllerTest {
         void blankContent() throws Exception {
             String body = """
                     {
-                        "userId": "%s",
                         "categoryId": 1,
                         "title": "제목",
                         "content": "   "
                     }
-                    """.formatted(USER_ID);
+                    """;
 
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -355,14 +347,14 @@ class NoteControllerTest {
 
             String body = """
                     {
-                        "userId": "%s",
                         "categoryId": 1,
                         "title": "%s",
                         "content": "내용"
                     }
-                    """.formatted(USER_ID, title);
+                    """.formatted(title);
 
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated());
@@ -375,14 +367,14 @@ class NoteControllerTest {
 
             String body = """
                     {
-                        "userId": "%s",
                         "categoryId": 1,
                         "title": "%s",
                         "content": "내용"
                     }
-                    """.formatted(USER_ID, title);
+                    """.formatted(title);
 
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -392,6 +384,7 @@ class NoteControllerTest {
         @DisplayName("요청 본문이 비어있으면 400 반환")
         void emptyBody() throws Exception {
             mockMvc.perform(post("/api/notes")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(""))
                     .andExpect(status().isBadRequest());
@@ -414,6 +407,7 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(put("/api/notes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -431,6 +425,7 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(put("/api/notes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -450,6 +445,7 @@ class NoteControllerTest {
                     """.formatted(title);
 
             mockMvc.perform(put("/api/notes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -470,6 +466,7 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(put("/api/notes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isOk());

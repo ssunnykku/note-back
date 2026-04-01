@@ -5,26 +5,33 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.sun.note.config.SecurityConfig;
 import com.sun.note.dto.CategoryResponse;
+import com.sun.note.filter.JwtFilter;
 import com.sun.note.service.CategoryNoteService;
 import com.sun.note.service.CategoryService;
-
 import com.sun.note.exception.BusinessException;
 import com.sun.note.exception.ErrorCode;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(CategoryController.class)
+@WebMvcTest(value = CategoryController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                SecurityConfig.class, JwtFilter.class }))
+@WithMockUser
 class CategoryControllerTest {
 
     @Autowired
@@ -59,6 +66,7 @@ class CategoryControllerTest {
                     """.formatted(NAME);
 
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated())
@@ -85,6 +93,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isOk())
@@ -105,6 +114,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(patch("/api/categories/999")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isNotFound());
@@ -125,6 +135,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -138,6 +149,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -157,6 +169,7 @@ class CategoryControllerTest {
                     """.formatted(name);
 
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isOk());
@@ -174,6 +187,7 @@ class CategoryControllerTest {
                     """.formatted(name);
 
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -183,6 +197,7 @@ class CategoryControllerTest {
         @DisplayName("요청 본문이 비어있으면 400 반환")
         void emptyBody() throws Exception {
             mockMvc.perform(patch("/api/categories/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(""))
                     .andExpect(status().isBadRequest());
@@ -203,6 +218,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -216,6 +232,7 @@ class CategoryControllerTest {
                     """;
 
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -235,6 +252,7 @@ class CategoryControllerTest {
                     """.formatted(name);
 
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isCreated());
@@ -252,6 +270,7 @@ class CategoryControllerTest {
                     """.formatted(name);
 
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
@@ -261,6 +280,7 @@ class CategoryControllerTest {
         @DisplayName("요청 본문이 비어있으면 400 반환")
         void emptyBody() throws Exception {
             mockMvc.perform(post("/api/categories")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(""))
                     .andExpect(status().isBadRequest());

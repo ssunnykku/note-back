@@ -64,6 +64,7 @@ __MACOSX/
 ### PostgreSQL ###
 # 로컬 데이터베이스 덤프 파일
 *.sql
+!docs/**/*.sql
 *.dump
 
 ### Docker ###

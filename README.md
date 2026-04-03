@@ -15,13 +15,13 @@ Spring Boot 기반 노트 애플리케이션 백엔드
 ### 실행
 
 ```bash
-docker compose up --build -d
+docker compose -f docker/docker-compose.yml up --build -d
 ```
 
 ### 중지
 
 ```bash
-docker compose down
+docker compose -f docker/docker-compose.yml down
 ```
 
 ### 소스 수정 후 반영
@@ -29,13 +29,13 @@ docker compose down
 로컬 소스가 컨테이너에 볼륨 마운트되어 있으므로, 재시작만 하면 변경된 코드가 반영됩니다.
 
 ```bash
-docker compose restart app
+docker compose -f docker/docker-compose.yml restart app
 ```
 
 ### 로그 확인
 
 ```bash
-docker compose logs -f app
+docker compose -f docker/docker-compose.yml logs -f app
 ```
 
 ### DB 접속

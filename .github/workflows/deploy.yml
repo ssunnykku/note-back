@@ -16,10 +16,10 @@ jobs:
       - name: Build JAR
         run: ./gradlew bootJar -x test
 
-      - name: Debug build output
-        run: |
-          ls -R .
-          ls -R build/libs || true
+      # - name: Debug build output
+      #   run: |
+      #     ls -R .
+      #     ls -R build/libs || true
 
       - name: Build Docker image
         run: docker build -t ssunnykku/note:dev -f docker/dockerfile.dev .
@@ -35,8 +35,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: 'docker-compose.dev.yml'
-          target: '/home/note/docker/'
+          source: 'docker/docker-compose.dev.yml'
+          target: '/home/note/'
 
       - name: Create .env file
         run: |

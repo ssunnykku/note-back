@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.10
@@ -20,7 +20,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/note/note-back
-            git fetch --all
+            git fetch origin dev
+            git reset --hard origin/dev
             git pull origin dev --force
             ./gradlew build
             pkill -f 'java -jar' || true

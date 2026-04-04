@@ -1,4 +1,17 @@
 services:
+  app:
+    image: note-hub/note:latest
+    container_name: note-app
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - postgres
+
   postgres:
     image: postgres:16
     container_name: postgres-db
@@ -10,7 +23,7 @@ services:
     ports:
       - '55432:5432'
     volumes:
-      - ../docker-data/db:/var/lib/postgresql/data
+      - ../docker-data/db:/home/note/postgresql/data
 
 volumes:
   gradle-cache:

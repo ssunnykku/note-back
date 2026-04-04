@@ -1,6 +1,6 @@
 services:
   app:
-    image: note-hub/note:dev
+    image: ssunnykku/note:dev
     container_name: note-app
     restart: always
     ports:

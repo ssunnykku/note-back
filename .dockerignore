@@ -1,6 +1,6 @@
 .git
 .gradle
-build
+# build
 docker-data
 .idea
 *.iml

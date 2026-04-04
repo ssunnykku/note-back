@@ -22,7 +22,7 @@ jobs:
           ls -R build/libs || true
 
       - name: Build Docker image
-        run: docker build -t note-hub/note:dev -f docker/dockerfile.dev .
+        run: docker build -t ssunnykku/note:dev -f docker/dockerfile.dev .
 
       - name: Push Docker image
         run: |

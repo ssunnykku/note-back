@@ -27,7 +27,7 @@ jobs:
       - name: Push Docker image
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker push note-hub/note:dev
+          docker push ssunnykku/note:dev
 
       - name: Copy docker-compose file to EC2
         uses: appleboy/scp-action@v0.1.7

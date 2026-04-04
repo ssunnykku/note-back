@@ -16,6 +16,11 @@ jobs:
       - name: Build JAR
         run: ./gradlew bootJar -x test
 
+      - name: Debug build output
+        run: |
+          ls -R .
+          ls -R build/libs || true
+
       - name: Build Docker image
         run: docker build -t note-hub/note:dev -f docker/dockerfile.dev .
 

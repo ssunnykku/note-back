@@ -61,5 +61,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/note/docker
-            docker-compose -f docker-compose.dev.yml pull
-            docker-compose -f docker-compose.dev.yml up -d
+            sudo docker-compose -f docker-compose.dev.yml pull
+            sudo docker-compose -f docker-compose.dev.yml up -d

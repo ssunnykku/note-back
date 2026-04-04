@@ -1,6 +1,8 @@
 services:
   app:
     image: ssunnykku/note:dev
+    env_file:
+      - .env
     container_name: note-app
     restart: always
     ports:

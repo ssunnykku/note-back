@@ -13,10 +13,10 @@
 - 카테고리 수정
     `PATCH /api/categories/{id}`
 - 카테고리별 노트 목록 조회 (categoryId 파라미터가 없으면 미분류 노트 반환)
-    `GET /api/categories/{userId}/notes?deleted=false`
-    `GET /api/categories/{userId}/notes`
+    `GET /api/categories/notes?deleted=false`
+    `GET /api/categories/notes`
 - 노트 리스트 조회 by categoryId
-    `GET /api/categories/{userId}`
+    `GET /api/categories/`
     - categoryId = null인 노트는 "미분류" 노트로 취급한다.
 
 ## Note

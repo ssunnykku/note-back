@@ -1,5 +1,7 @@
 package com.sun.note.domain.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,9 +23,12 @@ public class Category {
 
     private String name;
 
-    public static Category of(String name) {
+    private UUID userId;
+
+    public static Category of(String name, UUID userId) {
         return Category.builder()
                 .name(name)
+                .userId(userId)
                 .build();
     }
 

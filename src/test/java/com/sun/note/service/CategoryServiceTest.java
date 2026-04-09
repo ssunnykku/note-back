@@ -1,6 +1,7 @@
 package com.sun.note.service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,16 +32,17 @@ public class CategoryServiceTest {
     private CategoryService categoryService;
 
     private static final String NAME = "일상";
+    private static final UUID USER_ID = UUID.randomUUID();
 
     @Test
     @DisplayName("카테고리 생성")
     void testAddCategory() {
         // given
-        Category category = Category.of(NAME);
+        Category category = Category.of(NAME, USER_ID);
         when(categoryRepository.save(any(Category.class))).thenReturn(category);
 
         // when
-        CategoryResponse result = categoryService.addCategory(NAME);
+        CategoryResponse result = categoryService.addCategory(NAME, USER_ID);
 
         // then
         assertThat(result).isNotNull();
@@ -51,11 +53,11 @@ public class CategoryServiceTest {
     @DisplayName("카테고리 수정")
     void testEditCategory() {
         // given
-        Category category = Category.of(NAME);
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        Category category = Category.of(NAME, USER_ID);
+        when(categoryRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(category));
 
         // when
-        CategoryResponse result = categoryService.editCategory(1L, "개발");
+        CategoryResponse result = categoryService.editCategory(1L, "개발", USER_ID);
 
         // then
         assertThat(result).isNotNull();
@@ -65,9 +67,9 @@ public class CategoryServiceTest {
     @Test
     @DisplayName("존재하지 않는 카테고리 수정 시 예외 처리")
     void testEditCategoryException() {
-        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdAndUserId(999L, USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.editCategory(999L, "개발"))
+        assertThatThrownBy(() -> categoryService.editCategory(999L, "개발", USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }

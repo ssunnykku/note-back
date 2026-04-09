@@ -1,5 +1,7 @@
 package com.sun.note.service;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 
 import com.sun.note.domain.entity.Category;
@@ -18,18 +20,18 @@ public class CategoryService {
 
     // 생성
     @Transactional
-    public CategoryResponse addCategory(String name) {
-        Category category = categoryRepository.save(Category.of(name));
-        return CategoryResponse.of(category.getId(), category.getName());
+    public CategoryResponse addCategory(String name, UUID userId) {
+        Category category = categoryRepository.save(Category.of(name, userId));
+        return CategoryResponse.from(category);
     }
 
     // 수정
     @Transactional
-    public CategoryResponse editCategory(Long id, String name) {
-        Category category = categoryRepository.findById(id)
+    public CategoryResponse editCategory(Long id, String name, UUID userId) {
+        Category category = categoryRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
         category.editName(name);
-        return CategoryResponse.of(category.getId(), category.getName());
+        return CategoryResponse.from(category);
     }
 
 

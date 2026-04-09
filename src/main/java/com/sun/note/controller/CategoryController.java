@@ -47,8 +47,10 @@ public class CategoryController {
     @PatchMapping("{id}")
     ResponseEntity<CategoryResponse> editCategory(
             @PathVariable("id") Long id,
-            @Valid @RequestBody EditCategoryRequest dto) {
-        CategoryResponse category = categoryService.editCategory(id, dto.name());
+            @Valid @RequestBody EditCategoryRequest dto,
+            Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        CategoryResponse category = categoryService.editCategory(id, dto.name(), userId);
         return ResponseEntity.ok().body(category);
     }
 

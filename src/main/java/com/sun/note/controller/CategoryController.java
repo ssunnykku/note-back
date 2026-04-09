@@ -35,8 +35,11 @@ public class CategoryController {
 
     // 생성
     @PostMapping
-    ResponseEntity<CategoryResponse> addCategory(@Valid @RequestBody CreateCategoryRequest dto) {
-        CategoryResponse category = categoryService.addCategory(dto.name());
+    ResponseEntity<CategoryResponse> addCategory(
+            @Valid @RequestBody CreateCategoryRequest dto,
+                Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        CategoryResponse category = categoryService.addCategory(dto.name(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(category);
     }
 

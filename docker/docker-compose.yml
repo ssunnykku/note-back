@@ -12,6 +12,19 @@ services:
     volumes:
       - ../docker-data/db:/var/lib/postgresql/data
 
+  postgres-test:
+    image: postgres:16
+    container_name: postgres-test-db
+    restart: always
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: note_test
+    ports:
+      - '55433:5432'
+    volumes:
+      - ../docker-data/db-test:/var/lib/postgresql/data
+
   app:
     build:
       context: ..

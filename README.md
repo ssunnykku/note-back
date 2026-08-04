@@ -60,7 +60,9 @@ docker exec note-app ./gradlew test --tests "com.sun.note.controller.NoteControl
 
 ### 접속 정보
 
-| 항목 | 내용                                    |
-| ---- | --------------------------------------- |
-| 앱   | `http://localhost:8080`                 |
-| DB   | `localhost:55432` (postgres / postgres) |
+| 항목       | 내용                                           |
+| ---------- | ---------------------------------------------- |
+| 앱         | `http://localhost:8080`                        |
+| Swagger UI | `http://localhost:8080/swagger-ui/index.html`  |
+| API Docs   | `http://localhost:8080/v3/api-docs`            |
+| DB         | `localhost:55432` (postgres / postgres)        |

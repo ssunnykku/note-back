@@ -2,6 +2,10 @@
 -- Note — DDL (PostgreSQL)
 -- ============================================================
 
+
+DROP table users;
+DROP table notes;
+DROP table categories;
 -- Note 및 카테고리 관리에 대한 DDL
 -- FK 제약은 걸지 않음 (DELETE CASCADE 역시 코드 레벨에서 제어한다.)
 
@@ -14,7 +18,7 @@ CREATE TABLE users (
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP
 
-    )
+    );
 
 -- 노트
 CREATE TABLE notes (
@@ -26,9 +30,10 @@ CREATE TABLE notes (
         deleted BOOLEAN NOT NULL DEFAULT 'false',
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP,
-        deleted_at TIMESTAMP
+        deleted_at TIMESTAMP,
+        version BIGINT
 
-    )
+    );
 
 -- 카테고리
 CREATE TABLE categories (
@@ -36,7 +41,7 @@ CREATE TABLE categories (
     user_id UUID NOT NULL, 
     name VARCHAR(100) NULL
 
-    )
+    );
     
 -- 인덱스
 CREATE INDEX idx_user_notes ON notes (user_id);

@@ -34,9 +34,11 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column
     private UUID id;
 
     @Size(min = 2, max = 50)
+    @Column
     private String name;
 
     @Email
@@ -49,9 +51,11 @@ public class User {
     private String password;
 
     @CreatedDate
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public static User of(String name, String email, String password) {

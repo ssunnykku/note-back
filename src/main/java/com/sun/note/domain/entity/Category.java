@@ -19,10 +19,13 @@ public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column
     private Long id;
 
+    @Column(name = "name")
     private String name;
 
+    @Column(name = "user_id")
     private UUID userId;
 
     public static Category of(String name, UUID userId) {

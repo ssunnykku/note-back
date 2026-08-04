@@ -12,6 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Field;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,16 +89,39 @@ public class NoteServiceTest {
         // given
         Note note = createNote();
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        NoteResponse result = noteService.editNote(note.getId(), 2L, "첫번째 노트 수정", "#내용 수정");
+        NoteResponse result = noteService.editNote(note.getId(), CATEGORY_ID, "첫번째 노트 수정", "#내용 수정", note.getVersion());
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.categoryId()).isEqualTo(2L);
+        assertThat(result.categoryId()).isEqualTo(CATEGORY_ID);
         assertThat(result.title()).isEqualTo("첫번째 노트 수정");
         assertThat(result.content()).isEqualTo("#내용 수정");
+    }
 
+    @Test
+    @DisplayName("노트 수정 시 응답에 변경된 버전이 포함되어야 한다")
+    void testEditNoteReturnsUpdatedVersion() throws Exception {
+        // given
+        Note note = createNote(); // version = 0L
+        Long originalVersion = note.getVersion();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> {
+            Note saved = invocation.getArgument(0);
+            // JPA @Version flush 시뮬레이션: version + 1
+            Field versionField = Note.class.getDeclaredField("version");
+            versionField.setAccessible(true);
+            versionField.set(saved, saved.getVersion() + 1);
+            return saved;
+        });
+
+        // when
+        NoteResponse result = noteService.editNote(note.getId(), CATEGORY_ID, "수정", "#수정", originalVersion);
+
+        // then - 수정 후 응답 version은 요청 version보다 커야 한다
+        assertThat(result.version()).isEqualTo(originalVersion + 1);
     }
 
     @Test
@@ -104,7 +129,7 @@ public class NoteServiceTest {
     void testEditNoteException() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT))
+        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, 0L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
 
@@ -136,6 +161,20 @@ public class NoteServiceTest {
     }
 
     @Test
+    @DisplayName("버전 불일치 시 예외처리(수정)")
+    void testEditNoteVersionConflict() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        Long wrongVersion = 999L;
+        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, wrongVersion))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.VERSION_CONFLICT.getMessage());
+    }
+
+    @Test
     @DisplayName("삭제된 노트 수정 시 예외처리")
     void testEditDeletedNoteException() {
         // given
@@ -144,7 +183,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT))
+        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, 0L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }

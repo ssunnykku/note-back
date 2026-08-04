@@ -100,11 +100,11 @@ class CreateNoteRequestValidationTest {
         }
 
         @Test
-        @DisplayName("빈 문자열이면 실패")
-        void blankContent() {
+        @DisplayName("빈 문자열이어도 통과 (@NotNull)")
+        void blankContent_allowed() {
             var request = CreateNoteRequest.of(VALID_CATEGORY_ID, VALID_TITLE, "  ");
             Set<ConstraintViolation<CreateNoteRequest>> violations = validator.validate(request);
-            assertThat(violations).isNotEmpty();
+            assertThat(violations).isEmpty();
         }
 
         @Test

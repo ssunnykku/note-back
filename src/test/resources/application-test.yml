@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:55433/note_test
+    username: testuser
+    password: testpass
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+jwt:
+  secret: 8+T8u4RuiMFnulypsZTC/jVrSDwAYERM0GQ7R9B+Mfg=
+  access-expired: 3600000

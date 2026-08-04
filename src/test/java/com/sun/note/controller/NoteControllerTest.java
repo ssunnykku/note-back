@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(value = NoteController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
-                SecurityConfig.class, JwtFilter.class }))
+        SecurityConfig.class, JwtFilter.class }))
 @WithMockUser(username = "2013a306-9369-46ba-ac55-2f547ac5c50f")
 class NoteControllerTest {
 
@@ -55,9 +55,8 @@ class NoteControllerTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 3, 17, 12, 0, 0);
 
     private NoteResponse createNoteResponse() {
-        return NoteResponse.of(1L, USER_ID, CATEGORY_ID, TITLE, CONTENT, NOW, NOW);
+        return NoteResponse.of(1L, USER_ID, CATEGORY_ID, TITLE, CONTENT, NOW, NOW, 1L);
     }
-
 
     @Nested
     @DisplayName("POST /api/notes - 노트 생성")
@@ -66,27 +65,27 @@ class NoteControllerTest {
         @Test
         @DisplayName("유효한 요청이면 201 Created 반환(categoryId 입력x)")
         void addNote_success() throws Exception {
-                when(noteService.addNote(any(UUID.class), isNull(), any(String.class), any(String.class)))
-                                .thenReturn(createNoteResponse());
+            when(noteService.addNote(any(UUID.class), isNull(), any(String.class), any(String.class)))
+                    .thenReturn(createNoteResponse());
 
-                String body = """
-                                {
-                                    "title": "%s",
-                                    "content": "%s"
-                                }
-                                """.formatted(TITLE, CONTENT);
+            String body = """
+                    {
+                        "title": "%s",
+                        "content": "%s"
+                    }
+                    """.formatted(TITLE, CONTENT);
 
-                mockMvc.perform(post("/api/notes")
-                                .with(csrf())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(body))
-                                .andExpect(status().isCreated())
-                                .andExpect(jsonPath("$.id").value(1))
-                                .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
-                                .andExpect(jsonPath("$.title").value(TITLE))
-                                .andExpect(jsonPath("$.content").value(CONTENT));
+            mockMvc.perform(post("/api/notes")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
+                    .andExpect(jsonPath("$.title").value(TITLE))
+                    .andExpect(jsonPath("$.content").value(CONTENT));
         }
-        
+
         @Test
         @DisplayName("유효한 요청이면 201 Created 반환")
         void addNote_success_withoutCategory() throws Exception {
@@ -102,9 +101,9 @@ class NoteControllerTest {
                             """.formatted(CATEGORY_ID, TITLE, CONTENT);
 
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
@@ -121,22 +120,23 @@ class NoteControllerTest {
         @Test
         @DisplayName("유효한 요청이면 200 OK 반환")
         void editNote_success() throws Exception {
-            NoteResponse response = NoteResponse.of(1L, USER_ID, 2L, "수정된 제목", "수정된 내용", NOW, NOW);
-            when(noteService.editNote(eq(1L), eq(2L), eq("수정된 제목"), eq("수정된 내용")))
+            NoteResponse response = NoteResponse.of(1L, USER_ID, 2L, "수정된 제목", "수정된 내용", NOW, NOW, 1L);
+            when(noteService.editNote(eq(1L), eq(2L), eq("수정된 제목"), eq("수정된 내용"), eq(1L)))
                     .thenReturn(response);
 
             String body = """
                     {
                         "categoryId": 2,
                         "title": "수정된 제목",
-                        "content": "수정된 내용"
+                        "content": "수정된 내용",
+                        "version": 1
                     }
                     """;
 
             mockMvc.perform(put("/api/notes/1")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.title").value("수정된 제목"))
@@ -149,21 +149,22 @@ class NoteControllerTest {
         @Test
         @DisplayName("존재하지 않는 노트면 404 반환")
         void editNote_notFound() throws Exception {
-            when(noteService.editNote(eq(999L), any(), any(), any()))
+            when(noteService.editNote(eq(999L), any(), any(), any(), any()))
                     .thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             String body = """
                     {
                         "categoryId": 1,
                         "title": "제목",
-                        "content": "내용"
+                        "content": "내용",
+                        "version": 1
                     }
                     """;
 
             mockMvc.perform(put("/api/notes/999")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isNotFound());
         }
     }
@@ -315,15 +316,17 @@ class NoteControllerTest {
                             """;
 
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("content가 빈 문자열이면 400 반환")
-        void blankContent() throws Exception {
+        @DisplayName("content가 빈 문자열이어도 통과 (@NotNull)")
+        void blankContent_allowed() throws Exception {
+            when(noteService.addNote(any(), any(), any(), any())).thenReturn(createNoteResponse());
+
             String body = """
                     {
                         "categoryId": 1,
@@ -333,10 +336,10 @@ class NoteControllerTest {
                     """;
 
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest());
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+                    .andExpect(status().isCreated());
         }
 
         @Test
@@ -354,9 +357,9 @@ class NoteControllerTest {
                     """.formatted(title);
 
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isCreated());
         }
 
@@ -374,9 +377,9 @@ class NoteControllerTest {
                     """.formatted(title);
 
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isBadRequest());
         }
 
@@ -384,9 +387,9 @@ class NoteControllerTest {
         @DisplayName("요청 본문이 비어있으면 400 반환")
         void emptyBody() throws Exception {
             mockMvc.perform(post("/api/notes")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(""))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(""))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -402,14 +405,15 @@ class NoteControllerTest {
                     {
                         "categoryId": 1,
                         "title": "   ",
-                        "content": "내용"
+                        "content": "내용",
+                        "version": 1
                     }
                     """;
 
             mockMvc.perform(put("/api/notes/1")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isBadRequest());
         }
 
@@ -420,14 +424,15 @@ class NoteControllerTest {
                     {
                         "categoryId": 1,
                         "title": "제목",
-                        "content": "   "
+                        "content": "   ",
+                        "version": 1
                     }
                     """;
 
             mockMvc.perform(put("/api/notes/1")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isBadRequest());
         }
 
@@ -440,35 +445,37 @@ class NoteControllerTest {
                     {
                         "categoryId": 1,
                         "title": "%s",
-                        "content": "내용"
+                        "content": "내용",
+                        "version": 1
                     }
                     """.formatted(title);
 
             mockMvc.perform(put("/api/notes/1")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
         @DisplayName("categoryId가 null이어도 통과 (선택 필드)")
         void nullCategoryId_allowed() throws Exception {
-            NoteResponse response = NoteResponse.of(1L, USER_ID, null, "제목", "내용", NOW, NOW);
-            when(noteService.editNote(eq(1L), eq(null), eq("제목"), eq("내용")))
+            NoteResponse response = NoteResponse.of(1L, USER_ID, null, "제목", "내용", NOW, NOW, 1L);
+            when(noteService.editNote(eq(1L), eq(null), eq("제목"), eq("내용"), eq(1L)))
                     .thenReturn(response);
 
             String body = """
                     {
                         "title": "제목",
-                        "content": "내용"
+                        "content": "내용",
+                        "version": 1
                     }
                     """;
 
             mockMvc.perform(put("/api/notes/1")
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
                     .andExpect(status().isOk());
         }
     }

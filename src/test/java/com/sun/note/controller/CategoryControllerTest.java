@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = CategoryController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
                 SecurityConfig.class, JwtFilter.class }))
-@WithMockUser
+@WithMockUser(username = "2013a306-9369-46ba-ac55-2f547ac5c50f")
 class CategoryControllerTest {
 
     @Autowired
@@ -46,7 +46,7 @@ class CategoryControllerTest {
     private static final String NAME = "일상";
 
     private CategoryResponse createCategoryResponse() {
-        return CategoryResponse.of(1L, NAME);
+        return new CategoryResponse(1L, NAME);
     }
 
     @Nested
@@ -56,7 +56,7 @@ class CategoryControllerTest {
         @Test
         @DisplayName("유효한 요청이면 201 Created 반환")
         void addCategory_success() throws Exception {
-            when(categoryService.addCategory(any(String.class)))
+            when(categoryService.addCategory(any(String.class), any(java.util.UUID.class)))
                     .thenReturn(createCategoryResponse());
 
             String body = """
@@ -82,8 +82,8 @@ class CategoryControllerTest {
         @Test
         @DisplayName("유효한 요청이면 200 OK 반환")
         void editCategory_success() throws Exception {
-            CategoryResponse response = CategoryResponse.of(1L, "개발");
-            when(categoryService.editCategory(eq(1L), eq("개발")))
+            CategoryResponse response = new CategoryResponse(1L, "개발");
+            when(categoryService.editCategory(eq(1L), eq("개발"), any(java.util.UUID.class)))
                     .thenReturn(response);
 
             String body = """
@@ -104,7 +104,7 @@ class CategoryControllerTest {
         @Test
         @DisplayName("존재하지 않는 카테고리면 404 반환")
         void editCategory_notFound() throws Exception {
-            when(categoryService.editCategory(eq(999L), any()))
+            when(categoryService.editCategory(eq(999L), any(), any(java.util.UUID.class)))
                     .thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             String body = """
@@ -159,8 +159,8 @@ class CategoryControllerTest {
         @DisplayName("name이 100자면 통과")
         void nameAtMaxLength() throws Exception {
             String name = "a".repeat(100);
-            when(categoryService.editCategory(eq(1L), any(String.class)))
-                    .thenReturn(CategoryResponse.of(1L, name));
+            when(categoryService.editCategory(eq(1L), any(String.class), any(java.util.UUID.class)))
+                    .thenReturn(new CategoryResponse(1L, name));
 
             String body = """
                     {
@@ -242,8 +242,8 @@ class CategoryControllerTest {
         @DisplayName("name이 100자면 통과")
         void nameAtMaxLength() throws Exception {
             String name = "a".repeat(100);
-            when(categoryService.addCategory(any(String.class)))
-                    .thenReturn(CategoryResponse.of(1L, name));
+            when(categoryService.addCategory(any(String.class), any(java.util.UUID.class)))
+                    .thenReturn(new CategoryResponse(1L, name));
 
             String body = """
                     {

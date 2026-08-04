@@ -4,10 +4,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -39,6 +41,34 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(problem);
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockException e) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle(ErrorCode.VERSION_CONFLICT.name());
+        problem.setDetail(ErrorCode.VERSION_CONFLICT.getMessage());
+
+        log.error("버전 충돌 발생 {}", e);
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(problem);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleJpaOptimisticLock(ObjectOptimisticLockingFailureException e) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle(ErrorCode.VERSION_CONFLICT.name());
+        problem.setDetail(ErrorCode.VERSION_CONFLICT.getMessage());
+
+        log.error("버전 충돌 발생 {}", e);
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
                 .body(problem);
     }
 

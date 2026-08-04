@@ -26,32 +26,41 @@ public class Note {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column
     private Long id;
 
     @NotNull
+    @Column(name = "user_id")
     private UUID userId;
 
+    @Column(name = "category_id")
     private Long categoryId;
 
     @NotNull
+    @Column
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String content;
 
     @CreatedDate
-    @Column(updatable = false, nullable = false)
+    @Column(updatable = false, nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(nullable = false)
+    @Column(nullable = false, name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Builder.Default
     @Column(nullable = false)
     private Boolean deleted = false;
 
+    @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Builder.Default
+    @Version
+    private Long version = 0L;
 
     public static Note of() {
         return Note.builder().build();

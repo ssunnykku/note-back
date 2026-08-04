@@ -34,7 +34,8 @@ public class CategoryNoteService {
                 .map(note -> NoteResponse.of(note.getId(), note.getUserId(),
                         note.getCategoryId(), note.getTitle(),
                         note.getCreatedAt(),
-                        note.getUpdatedAt()))
+                        note.getUpdatedAt(),
+                        note.getVersion()))
                 .toList();
         return response;
     }

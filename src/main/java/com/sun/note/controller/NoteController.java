@@ -41,7 +41,7 @@ public class NoteController {
     // 수정
     @PutMapping("{id}")
     ResponseEntity<NoteResponse> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto) {
-        NoteResponse note = noteService.editNote(id, dto.categoryId(), dto.title(), dto.content());
+        NoteResponse note = noteService.editNote(id, dto.categoryId(), dto.title(), dto.content(), dto.version());
         return ResponseEntity.ok(note);
     }
 

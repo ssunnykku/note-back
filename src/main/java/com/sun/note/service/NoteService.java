@@ -24,24 +24,28 @@ public class NoteService {
         Note note = noteRepository.save(Note.of(userId, categoryId, title, content));
 
         NoteResponse noteResponse = NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
-                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
+                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt(), note.getVersion());
         return noteResponse;
     }
 
     // 수정
     @Transactional
-    public NoteResponse editNote(Long id, Long categoryId, String title, String content) {
+    public NoteResponse editNote(Long id, Long categoryId, String title, String content, Long version) {
         Note note = findActiveNote(id);
+        if (!note.getVersion().equals(version)) {
+            throw new BusinessException(ErrorCode.VERSION_CONFLICT);
+        }
         note.edit(categoryId, title, content);
-        return NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
-                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
+        Note saved = noteRepository.saveAndFlush(note);
+        return NoteResponse.of(saved.getId(), saved.getUserId(), saved.getCategoryId(),
+                saved.getTitle(), saved.getContent(), saved.getCreatedAt(), saved.getUpdatedAt(), saved.getVersion());
     }
 
     // 조회
     public NoteResponse getById(Long id) {
         Note note = findActiveNote(id);
         return NoteResponse.of(note.getId(), note.getUserId(), note.getCategoryId(),
-                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
+                note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt(), note.getVersion());
     }
 
     // 휴지통으로 이동 (soft delete)

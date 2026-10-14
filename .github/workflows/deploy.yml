@@ -79,7 +79,7 @@ jobs:
       - name: Deploy
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.HOST }} # 맥미니 (기존 EC2 118.37.66.140 에서 이전)
+          host: ${{ secrets.HOST }}
           port: 5232
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}

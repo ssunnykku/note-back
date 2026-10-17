@@ -49,23 +49,27 @@ jobs:
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
+      # appleboy/scp-action, appleboy/ssh-action은 Docker 컨테이너 액션이라 러너 호스트의
+      # tailscale0 인터페이스에 접근하지 못함. run: 스텝(호스트에서 직접 실행)으로 대체.
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >> ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName ${{ secrets.HOST }}
+            User ${{ secrets.SERVER_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
       - name: Copy docker-compose file
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: 'docker/docker-compose.dev.yml'
-          target: '/Users/note/deploy/'
+        run: scp docker/docker-compose.dev.yml deploy-target:/Users/note/deploy/
 
       - name: Copy nginx config
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: 'docker/nginx/nginx.conf'
-          target: '/Users/note/deploy/'
+        run: scp docker/nginx/nginx.conf deploy-target:/Users/note/deploy/
 
       - name: Create .env file
         run: |
@@ -76,22 +80,11 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
       - name: Copy .env file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: '.env'
-          target: '/Users/note/deploy/docker/'
+        run: scp .env deploy-target:/Users/note/deploy/docker/
 
       - name: Deploy
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            # ssh-action의 비대화형 쉘은 .zshrc를 안 읽어 Homebrew docker가 PATH에 안 잡힐 수 있음
+        run: |
+          ssh deploy-target '
             export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
             cd /Users/note/deploy/docker
             chmod 600 .env
@@ -111,3 +104,4 @@ jobs:
             echo "Health check failed after 10 attempts"
             docker compose -f docker-compose.dev.yml logs --tail=50 app
             exit 1
+          '

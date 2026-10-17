@@ -5,6 +5,10 @@ on:
     branches:
       - dev
 
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -36,13 +40,19 @@ jobs:
           # 맥미니가 Apple Silicon(arm64)일 수 있어 amd64/arm64 둘 다 빌드
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ssunnykku/note:dev
+          tags: |
+            ssunnykku/note:dev
+            ssunnykku/note:${{ github.sha }}
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Copy docker-compose file
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
-          port: 5232
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: 'docker/docker-compose.dev.yml'
@@ -52,7 +62,6 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
-          port: 5232
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: 'docker/nginx/nginx.conf'
@@ -70,7 +79,6 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
-          port: 5232
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: '.env'
@@ -80,7 +88,6 @@ jobs:
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.HOST }}
-          port: 5232
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
@@ -90,3 +97,17 @@ jobs:
             chmod 600 .env
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml up -d
+
+            echo "Waiting for app health check..."
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:8080/test > /dev/null; then
+                echo "Health check passed"
+                exit 0
+              fi
+              echo "Attempt $i/10 failed, retrying in 3s..."
+              sleep 3
+            done
+
+            echo "Health check failed after 10 attempts"
+            docker compose -f docker-compose.dev.yml logs --tail=50 app
+            exit 1

@@ -18,3 +18,7 @@ jwt:
 server:
   port: 8080
   address: 0.0.0.0
+
+# nginx가 프론트/백엔드를 같은 origin으로 묶어서 서빙하므로 CORS 허용 불필요
+cors:
+  allowed-origins: ""

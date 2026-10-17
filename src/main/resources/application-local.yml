@@ -14,3 +14,6 @@ spring:
 jwt:
   secret: 8+T8u4RuiMFnulypsZTC/jVrSDwAYERM0GQ7R9B+Mfg=
   access-expired: 3600000
+
+cors:
+  allowed-origins: http://localhost:5173

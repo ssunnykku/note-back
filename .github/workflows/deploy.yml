@@ -66,13 +66,13 @@ jobs:
           EOF
 
       - name: Prepare remote directories
-        run: ssh deploy-target 'mkdir -p /Users/dev/projects/note/deploy/back/docker/nginx'
+        run: ssh deploy-target 'mkdir -p /Users/dev/projects/note/deploy/back/docker /Users/dev/projects/note/deploy/nginx'
 
       - name: Copy docker-compose file
         run: scp docker/docker-compose.dev.yml deploy-target:/Users/dev/projects/note/deploy/back/docker/
 
       - name: Copy nginx config
-        run: scp docker/nginx/nginx.conf deploy-target:/Users/dev/projects/note/deploy/back/docker/nginx/
+        run: scp nginx/nginx.conf deploy-target:/Users/dev/projects/note/deploy/nginx/
 
       - name: Create .env file
         run: |

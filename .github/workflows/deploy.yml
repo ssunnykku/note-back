@@ -65,11 +65,14 @@ jobs:
             UserKnownHostsFile /dev/null
           EOF
 
+      - name: Prepare remote directories
+        run: ssh deploy-target 'mkdir -p /Users/dev/deploy/docker/nginx'
+
       - name: Copy docker-compose file
-        run: scp docker/docker-compose.dev.yml deploy-target:/Users/note/deploy/
+        run: scp docker/docker-compose.dev.yml deploy-target:/Users/dev/deploy/docker/
 
       - name: Copy nginx config
-        run: scp docker/nginx/nginx.conf deploy-target:/Users/note/deploy/
+        run: scp docker/nginx/nginx.conf deploy-target:/Users/dev/deploy/docker/nginx/
 
       - name: Create .env file
         run: |
@@ -80,13 +83,13 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
       - name: Copy .env file to server
-        run: scp .env deploy-target:/Users/note/deploy/docker/
+        run: scp .env deploy-target:/Users/dev/deploy/docker/
 
       - name: Deploy
         run: |
           ssh deploy-target '
             export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-            cd /Users/note/deploy/docker
+            cd /Users/dev/deploy/docker
             chmod 600 .env
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml up -d

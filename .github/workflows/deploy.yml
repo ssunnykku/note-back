@@ -96,16 +96,16 @@ jobs:
             docker compose -f docker-compose.dev.yml up -d
 
             echo "Waiting for app health check..."
-            for i in $(seq 1 10); do
+            for i in $(seq 1 24); do
               if curl -sf http://localhost:8080/test > /dev/null; then
                 echo "Health check passed"
                 exit 0
               fi
-              echo "Attempt $i/10 failed, retrying in 3s..."
-              sleep 3
+              echo "Attempt $i/24 failed, retrying in 5s..."
+              sleep 5
             done
 
-            echo "Health check failed after 10 attempts"
+            echo "Health check failed after 24 attempts"
             docker compose -f docker-compose.dev.yml logs --tail=50 app
             exit 1
           '

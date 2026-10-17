@@ -38,6 +38,6 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # macOS Docker Desktop은 /Users 하위 경로만 바인드 마운트 가능
-      - /Users/dev/deploy/front/dist:/usr/share/nginx/html:ro
+      - /Users/dev/projects/note/deploy/front/dist:/usr/share/nginx/html:ro
     depends_on:
       - app

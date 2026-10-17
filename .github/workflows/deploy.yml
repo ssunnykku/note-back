@@ -66,13 +66,13 @@ jobs:
           EOF
 
       - name: Prepare remote directories
-        run: ssh deploy-target 'mkdir -p /Users/dev/deploy/docker/nginx'
+        run: ssh deploy-target 'mkdir -p /Users/dev/projects/note/deploy/back/docker/nginx'
 
       - name: Copy docker-compose file
-        run: scp docker/docker-compose.dev.yml deploy-target:/Users/dev/deploy/docker/
+        run: scp docker/docker-compose.dev.yml deploy-target:/Users/dev/projects/note/deploy/back/docker/
 
       - name: Copy nginx config
-        run: scp docker/nginx/nginx.conf deploy-target:/Users/dev/deploy/docker/nginx/
+        run: scp docker/nginx/nginx.conf deploy-target:/Users/dev/projects/note/deploy/back/docker/nginx/
 
       - name: Create .env file
         run: |
@@ -83,13 +83,13 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
       - name: Copy .env file to server
-        run: scp .env deploy-target:/Users/dev/deploy/docker/
+        run: scp .env deploy-target:/Users/dev/projects/note/deploy/back/docker/
 
       - name: Deploy
         run: |
           ssh deploy-target '
             export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-            cd /Users/dev/deploy/docker
+            cd /Users/dev/projects/note/deploy/back/docker
             chmod 600 .env
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml up -d

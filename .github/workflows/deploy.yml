@@ -89,6 +89,7 @@ jobs:
         run: |
           ssh deploy-target '
             export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+            export DOCKER_HOST="unix:///Users/dev/.colima/default/docker.sock"
             cd /Users/dev/projects/note/deploy/back/docker
             chmod 600 .env
             docker compose -f docker-compose.dev.yml pull

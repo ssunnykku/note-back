@@ -36,8 +36,9 @@ services:
     ports:
       - '80:80'
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       # macOS Docker Desktop은 /Users 하위 경로만 바인드 마운트 가능
+      # nginx는 front/back 공통 진입점이라 deploy 루트 바로 아래 공유 경로에 둠
+      - /Users/dev/projects/note/deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - /Users/dev/projects/note/deploy/front/dist:/usr/share/nginx/html:ro
     depends_on:
       - app

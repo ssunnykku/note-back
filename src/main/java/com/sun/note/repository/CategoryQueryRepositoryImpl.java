@@ -30,6 +30,7 @@ public class CategoryQueryRepositoryImpl implements CategoryQueryRepository {
                 .leftJoin(note).on(note.categoryId.eq(category.id)
                         .and(note.userId.eq(userId))
                         .and(note.deleted.eq(deleted)))
+                .where(category.userId.eq(userId))
                 .orderBy(category.id.asc())
                 .fetch();
 

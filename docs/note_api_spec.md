@@ -31,3 +31,9 @@
     `PATCH /api/notes/{id}/restore`
 - 완전 삭제
     `DELETE /api/notes/{id}/restore`
+
+## Chat (AI)
+- 메시지 전송 (채팅방이 없으면 생성 후 전송)
+    `POST /api/chats/{chatId}/messages`
+    - chatId는 프론트에서 채팅방 생성 시 발급한 값을 그대로 사용한다 (별도 생성 API 없음).
+    - 백엔드는 자체 호스팅 중인 Ollama 서버에 요청을 전달(proxy)한다.

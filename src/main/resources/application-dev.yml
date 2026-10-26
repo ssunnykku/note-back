@@ -15,6 +15,11 @@ jwt:
   secret: ${JWT_SECRET}
   access-expired: 3600000
 
+# 앱은 도커 컨테이너에서 실행되고 Ollama는 Mac mini 호스트에 직접 설치되어 있으므로
+# host.docker.internal로 접근한다.
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://host.docker.internal:11434}
+
 server:
   port: 8080
   address: 0.0.0.0

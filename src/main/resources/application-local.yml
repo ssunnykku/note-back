@@ -15,5 +15,8 @@ jwt:
   secret: 8+T8u4RuiMFnulypsZTC/jVrSDwAYERM0GQ7R9B+Mfg=
   access-expired: 3600000
 
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+
 cors:
   allowed-origins: http://localhost:5173

@@ -61,8 +61,9 @@ public class OllamaClient {
 
             return response.message().content();
         } catch (RestClientException e) {
-            log.error("Ollama 호출 실패: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE);
+            // 응답 대기 중 timeout은 "응답 추출 실패"로 감싸져 오므로, 가장 안쪽 원인(예: SocketTimeoutException)을 함께 남긴다.
+            log.error("Ollama 호출 실패: model={}, cause={}", model, e.getMostSpecificCause().toString());
+            throw new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE, e);
         }
     }
 }

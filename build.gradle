@@ -38,6 +38,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // DB 마이그레이션 (src/main/resources/db/migration)
+    implementation 'org.flywaydb:flyway-core'
+
     // Spring Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
 

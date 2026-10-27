@@ -3,9 +3,12 @@ spring:
     url: jdbc:postgresql://localhost:55433/note_test
     username: testuser
     password: testpass
+  flyway:
+    # FlywayTestConfig 에서 매 기동마다 clean 후 migrate 한다.
+    clean-disabled: false
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: true
 jwt:
   secret: 8+T8u4RuiMFnulypsZTC/jVrSDwAYERM0GQ7R9B+Mfg=

@@ -47,13 +47,14 @@ CREATE TABLE categories (
 
     );
     
--- AI 채팅방 (id는 프론트에서 생성해 전달하는 값을 그대로 사용, 첫 메시지 전송 시 upsert)
+-- AI 채팅방 (POST /api/chats 로 생성, id는 서버 발급)
 CREATE TABLE chat_rooms (
-    id BIGINT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     user_id UUID NOT NULL,
     model_id VARCHAR(100),
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    updated_at TIMESTAMP NOT NULL,
+    pending_until TIMESTAMP -- 메시지 전송 잠금 만료 시각 (null이면 전송 가능)
 
     );
 

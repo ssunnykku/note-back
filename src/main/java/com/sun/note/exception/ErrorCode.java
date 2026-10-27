@@ -15,6 +15,7 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 등록된 이메일입니다."),
 
     VERSION_CONFLICT(HttpStatus.CONFLICT, "버전 충돌이 발생했습니다."),
+    CHAT_IN_PROGRESS(HttpStatus.CONFLICT, "이전 메시지의 응답을 기다리는 중입니다."),
 
     AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스에 연결할 수 없습니다.");
 

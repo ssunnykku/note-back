@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class OllamaClient {
 
     private final RestClient restClient;
+    private final Duration maxCallDuration;
 
     public OllamaClient(
             @Value("${ollama.base-url}") String baseUrl,
@@ -30,10 +31,16 @@ public class OllamaClient {
         requestFactory.setConnectTimeout((int) Duration.ofSeconds(connectTimeoutSeconds).toMillis());
         requestFactory.setReadTimeout((int) Duration.ofSeconds(readTimeoutSeconds).toMillis());
 
+        this.maxCallDuration = Duration.ofSeconds(connectTimeoutSeconds + readTimeoutSeconds);
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .build();
+    }
+
+    // 한 번의 호출이 timeout으로 끝나기까지 걸릴 수 있는 최대 시간 (connect + read)
+    public Duration getMaxCallDuration() {
+        return maxCallDuration;
     }
 
     public String chat(String model, List<OllamaMessage> messages) {
@@ -45,7 +52,10 @@ public class OllamaClient {
                     .retrieve()
                     .body(OllamaChatResponse.class);
 
-            if (response == null || response.message() == null) {
+            // content 없는 응답(예: tool_calls만 온 경우)도 실패로 본다. 그대로 저장하면 NOT NULL 위반으로 500이 된다.
+            if (response == null || response.message() == null
+                    || response.message().content() == null || response.message().content().isBlank()) {
+                log.error("Ollama 응답에 content가 없음: model={}", model);
                 throw new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE);
             }
 

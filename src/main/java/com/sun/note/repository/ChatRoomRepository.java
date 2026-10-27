@@ -14,13 +14,18 @@ import org.springframework.data.repository.query.Param;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     List<ChatRoom> findByUserIdOrderByCreatedAtDescIdDesc(UUID userId);
 
-    // 전송 잠금 획득. 본인 채팅방이고 잠겨 있지 않거나(또는 만료) 이면 1, 아니면 0.
-    // 조건 검사와 갱신이 한 UPDATE 문이라 동시 요청 중 하나만 성공한다.
+    // 전송 잠금 획득. 본인 채팅방이고, 이 방을 포함해 사용자의 어떤 채팅방에도 응답 대기 중인 전송이
+    // 없으면(또는 만료) 1, 아니면 0. 사용자당 동시 전송은 1건이다.
+    // 같은 방 동시 요청은 이 UPDATE의 행 잠금으로, 다른 방 동시 요청은 호출 전 사용자 행 잠금
+    // (UserRepository.lockForChat)으로 직렬화되어 하나만 성공한다.
     @Modifying
     @Query("""
             update ChatRoom r set r.pendingUntil = :until
             where r.id = :id and r.userId = :userId
               and (r.pendingUntil is null or r.pendingUntil < :now)
+              and not exists (
+                  select 1 from ChatRoom o
+                  where o.userId = :userId and o.id <> :id and o.pendingUntil >= :now)
             """)
     int acquireSendLock(@Param("id") Long id, @Param("userId") UUID userId,
             @Param("now") LocalDateTime now, @Param("until") LocalDateTime until);

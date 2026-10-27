@@ -14,3 +14,12 @@ logging:
   level:
     root: INFO
     com.sun.note: DEBUG
+
+# AI 채팅 사용량 제한 (기본값은 ChatProperties)
+chat:
+  history:
+    max-messages: 20    # AI에 함께 보낼 최근 메시지 수
+    max-chars: 12000    # 이전 대화 + 새 메시지 글자 수 합계 상한
+  rate-limit:
+    max-requests: 10    # 사용자별 window 동안 전송 가능 횟수
+    window: 2m

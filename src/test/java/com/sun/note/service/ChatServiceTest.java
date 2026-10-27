@@ -2,6 +2,8 @@ package com.sun.note.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.sun.note.client.OllamaClient;
 import com.sun.note.client.OllamaMessage;
+import com.sun.note.config.ChatProperties;
 import com.sun.note.domain.entity.ChatMessage;
 import com.sun.note.domain.entity.ChatRole;
 import com.sun.note.domain.entity.ChatRoom;
@@ -29,6 +32,7 @@ import com.sun.note.exception.BusinessException;
 import com.sun.note.exception.ErrorCode;
 import com.sun.note.repository.ChatMessageRepository;
 import com.sun.note.repository.ChatRoomRepository;
+import com.sun.note.repository.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,7 +57,16 @@ class ChatServiceTest {
     private ChatMessageRepository chatMessageRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private OllamaClient ollamaClient;
+
+    // 이전 대화는 최근 4개 / 100자까지, 전송은 2분에 3회까지
+    @Spy
+    private ChatProperties chatProperties = new ChatProperties(
+            new ChatProperties.History(4, 100),
+            new ChatProperties.RateLimit(3, Duration.ofMinutes(2)));
 
     // 실제 트랜잭션 없이 콜백만 실행되도록 mock 트랜잭션 매니저를 사용한다.
     @Spy
@@ -173,8 +186,8 @@ class ChatServiceTest {
         givenLockAcquired();
         ChatMessage previousUserMsg = ChatMessage.of(1L, CHAT_ROOM_ID, ChatRole.USER, "이전 질문", NOW.minusMinutes(1));
         ChatMessage previousAiMsg = ChatMessage.of(2L, CHAT_ROOM_ID, ChatRole.AI, "이전 답변", NOW.minusSeconds(30));
-        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(CHAT_ROOM_ID))
-                .thenReturn(List.of(previousUserMsg, previousAiMsg));
+        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtDescIdDesc(eq(CHAT_ROOM_ID), any()))
+                .thenReturn(List.of(previousAiMsg, previousUserMsg));
         when(ollamaClient.chat(eq("other-model"), any())).thenReturn(AI_CONTENT);
         when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> {
             ChatMessage message = invocation.getArgument(0);
@@ -211,11 +224,125 @@ class ChatServiceTest {
     }
 
     @Test
+    @DisplayName("사용자 행을 잠근 뒤 전송 잠금을 획득한다 (사용자 단위 직렬화)")
+    void sendMessage_locksUserBeforeAcquiringSendLock() {
+        // given
+        givenLockAcquired();
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(ChatMessage.of(3L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
+        when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
+
+        // when
+        chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, MODEL_ID);
+
+        // then
+        var inOrder = org.mockito.Mockito.inOrder(userRepository, chatRoomRepository);
+        inOrder.verify(userRepository).lockForChat(USER_ID);
+        inOrder.verify(chatRoomRepository).acquireSendLock(eq(CHAT_ROOM_ID), eq(USER_ID), any(), any());
+    }
+
+    @Test
+    @DisplayName("2분 안에 보낸 메시지가 제한(3회) 이상이면 429, 메시지 저장/AI 호출 안 함")
+    void sendMessage_rateLimited_throws() {
+        // given
+        givenLockAcquired();
+        when(chatMessageRepository.countByUserIdAndRoleSince(eq(USER_ID), eq(ChatRole.USER), any())).thenReturn(3L);
+
+        // then
+        assertThatThrownBy(() -> chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, MODEL_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.CHAT_RATE_LIMITED.getMessage());
+
+        ArgumentCaptor<LocalDateTime> sinceCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(chatMessageRepository).countByUserIdAndRoleSince(eq(USER_ID), eq(ChatRole.USER), sinceCaptor.capture());
+        assertThat(sinceCaptor.getValue()).isBetween(
+                LocalDateTime.now().minusMinutes(2).minusSeconds(5), LocalDateTime.now().minusMinutes(2));
+        verify(chatMessageRepository, never()).save(any(ChatMessage.class));
+        verify(ollamaClient, never()).chat(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("이전 대화는 최근 N개만 보내고, 맨 앞이 AI 답변이면 뺀다")
+    void sendMessage_historyLimitedByCount() {
+        // given: 오래된 순 u1 a1 u2 a2 u3 a3 → 최근 4개(u2 a2 u3 a3)
+        givenLockAcquired();
+        List<ChatMessage> desc = new ArrayList<>(List.of(
+                ChatMessage.of(1L, CHAT_ROOM_ID, ChatRole.USER, "u1", NOW),
+                ChatMessage.of(2L, CHAT_ROOM_ID, ChatRole.AI, "a1", NOW),
+                ChatMessage.of(3L, CHAT_ROOM_ID, ChatRole.USER, "u2", NOW),
+                ChatMessage.of(4L, CHAT_ROOM_ID, ChatRole.AI, "a2", NOW),
+                ChatMessage.of(5L, CHAT_ROOM_ID, ChatRole.USER, "u3", NOW),
+                ChatMessage.of(6L, CHAT_ROOM_ID, ChatRole.AI, "a3", NOW)));
+        Collections.reverse(desc);
+        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtDescIdDesc(eq(CHAT_ROOM_ID), any()))
+                .thenAnswer(invocation -> desc.subList(0, invocation.<org.springframework.data.domain.Pageable>getArgument(1).getPageSize()));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(ChatMessage.of(7L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
+        when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
+
+        // when
+        chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, MODEL_ID);
+
+        // then
+        assertThat(sentToOllama()).extracting(OllamaMessage::content).containsExactly("u2", "a2", "u3", "a3", CONTENT);
+    }
+
+    @Test
+    @DisplayName("이전 대화는 글자 수 합계(새 메시지 포함)가 제한 안에 드는 만큼만 보내고, 맨 앞 AI 답변은 뺀다")
+    void sendMessage_historyLimitedByChars() {
+        // given: 제한 100자, 새 메시지 3자 → 이전 대화 97자까지. 최근부터 a2(40) u2(40)까지 80자, a1(40)은 초과
+        givenLockAcquired();
+        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtDescIdDesc(eq(CHAT_ROOM_ID), any()))
+                .thenReturn(List.of(
+                        ChatMessage.of(4L, CHAT_ROOM_ID, ChatRole.AI, "d".repeat(40), NOW),
+                        ChatMessage.of(3L, CHAT_ROOM_ID, ChatRole.USER, "c".repeat(40), NOW),
+                        ChatMessage.of(2L, CHAT_ROOM_ID, ChatRole.AI, "b".repeat(40), NOW),
+                        ChatMessage.of(1L, CHAT_ROOM_ID, ChatRole.USER, "a".repeat(10), NOW)));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(ChatMessage.of(5L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
+        when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
+
+        // when
+        chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, MODEL_ID);
+
+        // then
+        assertThat(sentToOllama()).extracting(OllamaMessage::content)
+                .containsExactly("c".repeat(40), "d".repeat(40), CONTENT);
+    }
+
+    @Test
+    @DisplayName("이전 대화 범위에서 남은 것이 AI 답변뿐이면 새 메시지만 보낸다")
+    void sendMessage_historyOnlyAi_sendsOnlyNewMessage() {
+        // given
+        givenLockAcquired();
+        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtDescIdDesc(eq(CHAT_ROOM_ID), any()))
+                .thenReturn(List.of(
+                        ChatMessage.of(2L, CHAT_ROOM_ID, ChatRole.AI, "답변", NOW),
+                        ChatMessage.of(1L, CHAT_ROOM_ID, ChatRole.USER, "x".repeat(99), NOW)));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(ChatMessage.of(3L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
+        when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
+
+        // when
+        chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, MODEL_ID);
+
+        // then
+        assertThat(sentToOllama()).extracting(OllamaMessage::role, OllamaMessage::content)
+                .containsExactly(tuple("user", CONTENT));
+    }
+
+    private List<OllamaMessage> sentToOllama() {
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<OllamaMessage>> captor = ArgumentCaptor.forClass(List.class);
+        verify(ollamaClient).chat(anyString(), captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
     @DisplayName("Ollama 실패 - 사용자 메시지 삭제 + 잠금 해제, 모델 갱신 안 함, 예외 전파")
     void sendMessage_ollamaFails_rollsBack() {
         // given
         givenLockAcquired();
-        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(CHAT_ROOM_ID)).thenReturn(List.of());
         when(chatMessageRepository.save(any(ChatMessage.class)))
                 .thenReturn(ChatMessage.of(7L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
         when(ollamaClient.chat(eq(MODEL_ID), any()))
@@ -237,7 +364,6 @@ class ChatServiceTest {
     void sendMessage_saveAiFails_rollsBack() {
         // given
         givenLockAcquired();
-        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(CHAT_ROOM_ID)).thenReturn(List.of());
         when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
         RuntimeException dbFailure = new RuntimeException("db down");
         when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> {
@@ -261,7 +387,6 @@ class ChatServiceTest {
     void sendMessage_error_rollsBack() {
         // given
         givenLockAcquired();
-        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(CHAT_ROOM_ID)).thenReturn(List.of());
         when(chatMessageRepository.save(any(ChatMessage.class)))
                 .thenReturn(ChatMessage.of(7L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
         OutOfMemoryError error = new OutOfMemoryError("test");
@@ -279,7 +404,6 @@ class ChatServiceTest {
     void sendMessage_ollamaFails_andRollbackFails_stillThrowsOriginal() {
         // given
         givenLockAcquired();
-        when(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(CHAT_ROOM_ID)).thenReturn(List.of());
         when(chatMessageRepository.save(any(ChatMessage.class)))
                 .thenReturn(ChatMessage.of(7L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
         when(ollamaClient.chat(eq(MODEL_ID), any()))

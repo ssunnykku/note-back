@@ -250,6 +250,27 @@ class ChatControllerTest {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.title").value("CHAT_IN_PROGRESS"));
         }
+
+        @Test
+        @DisplayName("전송 횟수 제한을 넘으면 429 CHAT_RATE_LIMITED 반환")
+        void sendMessage_rateLimited() throws Exception {
+            when(chatService.sendMessage(eq(USER_ID), eq(CHAT_ID), any(), any()))
+                    .thenThrow(new BusinessException(ErrorCode.CHAT_RATE_LIMITED));
+
+            String body = """
+                    {
+                        "content": "안녕?",
+                        "modelId": "%s"
+                    }
+                    """.formatted(MODEL_ID);
+
+            mockMvc.perform(post("/api/chats/{chatId}/messages", CHAT_ID)
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.title").value("CHAT_RATE_LIMITED"));
+        }
     }
 
     @Test

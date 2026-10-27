@@ -16,6 +16,7 @@ public enum ErrorCode {
 
     VERSION_CONFLICT(HttpStatus.CONFLICT, "버전 충돌이 발생했습니다."),
     CHAT_IN_PROGRESS(HttpStatus.CONFLICT, "이전 메시지의 응답을 기다리는 중입니다."),
+    CHAT_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "메시지를 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요."),
 
     AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스에 연결할 수 없습니다.");
 

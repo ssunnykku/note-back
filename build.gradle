@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.3'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.github.spotbugs' version '6.0.26'
 }
 
 tasks.named('jar') {
@@ -77,4 +78,23 @@ tasks.register('integrationTest', Test) {
     useJUnitPlatform {
         includeTags 'integration'
     }
+}
+
+// 정적 분석 (버그 패턴). ./gradlew spotbugsMain → build/reports/spotbugs/main.html
+// 경고가 하나라도 있으면 빌드(CI)를 실패시킨다. 오탐은 config/spotbugs/exclude.xml 에 근거와 함께 제외한다.
+spotbugs {
+    ignoreFailures = false
+    excludeFilter = file('config/spotbugs/exclude.xml')
+}
+
+tasks.named('spotbugsMain') {
+    reports {
+        html.required = true
+        xml.required = false
+    }
+}
+
+// 테스트 코드는 분석하지 않는다.
+tasks.named('spotbugsTest') {
+    enabled = false
 }

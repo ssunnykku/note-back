@@ -1,9 +1,10 @@
 name: Deploy_dev
 
+# dev push 시 CI(ci.yml)가 테스트/정적 분석을 통과한 뒤 호출한다.
+# 테스트 없이 다시 배포해야 할 때는 Actions 탭에서 수동 실행(workflow_dispatch, dev 브랜치 선택)한다.
 on:
-  push:
-    branches:
-      - dev
+  workflow_call:
+  workflow_dispatch:
 
 concurrency:
   group: deploy-dev

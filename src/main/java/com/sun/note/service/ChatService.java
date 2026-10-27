@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -75,7 +76,8 @@ public class ChatService {
     public ChatMessageResponse sendMessage(UUID userId, Long chatRoomId, String content, String rawModelId) {
         // modelId는 그대로 Ollama 모델명이 되므로 앞뒤 공백을 지운다. (요청 검증에서 공백만 있는 값은 이미 400)
         String modelId = rawModelId.strip();
-        PreparedMessage prepared = transactionTemplate.execute(status -> {
+        // TransactionTemplate.execute는 시그니처상 null을 반환할 수 있지만 두 콜백 모두 null을 반환하지 않는다.
+        PreparedMessage prepared = Objects.requireNonNull(transactionTemplate.execute(status -> {
             // 같은 사용자의 전송을 직렬화한다. 다른 방 동시 전송이 둘 다 잠금을 얻거나 횟수 제한을 함께 통과하는 것을 막는다.
             userRepository.lockForChat(userId);
 
@@ -98,18 +100,18 @@ public class ChatService {
 
             ChatMessage userMessage = chatMessageRepository.save(ChatMessage.of(chatRoomId, ChatRole.USER, content));
             return new PreparedMessage(userMessage.getId(), lockUntil, ollamaMessages);
-        });
+        }));
 
         try {
             String aiContent = ollamaClient.chat(modelId, prepared.ollamaMessages());
 
-            ChatMessage aiMessage = transactionTemplate.execute(status -> {
+            ChatMessage aiMessage = Objects.requireNonNull(transactionTemplate.execute(status -> {
                 if (chatRoomRepository.completeSend(chatRoomId, prepared.lockUntil(), modelId, LocalDateTime.now()) == 0) {
                     // 잠금이 만료되어 다른 요청이 가져간 경우. 그 요청의 잠금은 건드리지 않는다.
                     log.warn("전송 잠금이 만료된 뒤 응답 완료: chatRoomId={}", chatRoomId);
                 }
                 return chatMessageRepository.save(ChatMessage.of(chatRoomId, ChatRole.AI, aiContent));
-            });
+            }));
             return ChatMessageResponse.from(aiMessage);
         } catch (Throwable e) {
             // Error(OOM 등)에서도 사용자 메시지가 남지 않도록 Throwable 전체에 대해 보상한다.

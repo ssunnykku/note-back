@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SpotBugs 제외 규칙. 오탐으로 판단한 패턴만 근거와 함께 추가한다. -->
+<FindBugsFilter>
+    <!-- QueryDSL이 생성하는 Q클래스 -->
+    <Match>
+        <Class name="~.*\.Q[A-Z][A-Za-z0-9]*"/>
+    </Match>
+
+    <!--
+        EI_EXPOSE_REP / EI_EXPOSE_REP2: 가변 객체를 복사하지 않고 보관/반환.
+        생성자 주입으로 받은 Spring 빈과, 요청/응답용 record DTO의 List 필드에서 대부분 발생한다.
+        빈은 싱글턴 공유가 의도이고, DTO는 직렬화 직전까지만 쓰여 방어적 복사의 실익이 없다.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+        CT_CONSTRUCTOR_THROW: 생성자에서 예외 발생 시 finalizer 공격 가능성.
+        Spring 빈(JwtUtil 등)은 설정이 잘못되면 생성자에서 예외를 던져 기동을 실패시키는 것이 의도이고,
+        finalize를 쓰지 않으므로 해당 공격이 성립하지 않는다.
+    -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+</FindBugsFilter>

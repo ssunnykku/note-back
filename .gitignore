@@ -65,6 +65,7 @@ __MACOSX/
 # 로컬 데이터베이스 덤프 파일
 *.sql
 !docs/**/*.sql
+!src/main/resources/db/migration/*.sql
 *.dump
 
 ### Docker ###

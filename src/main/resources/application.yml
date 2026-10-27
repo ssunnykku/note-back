@@ -1,6 +1,11 @@
 spring:
   profiles:
     active: dev
+  flyway:
+    # 스키마 변경은 db/migration 의 V{n}__*.sql 로만 한다. 적용된 파일은 수정 금지(체크섬 불일치로 기동 실패).
+    # Flyway 도입 전부터 테이블이 있던 DB는 V1(초기 스키마)을 적용된 것으로 간주하고 V2부터 실행한다.
+    baseline-on-migrate: true
+    baseline-version: 1
 
 logging:
   level:

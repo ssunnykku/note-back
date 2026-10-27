@@ -58,8 +58,8 @@ public class ChatService {
     // 채팅방 생성 (id는 서버에서 발급)
     @Transactional
     public ChatRoomResponse createChatRoom(UUID userId, String modelId) {
-        // 빈 문자열은 "모델 미지정"과 같게 취급한다.
-        ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.of(userId, StringUtils.hasText(modelId) ? modelId : null));
+        // 앞뒤 공백은 지우고, 비어 있으면 "모델 미지정"(null)으로 취급한다.
+        ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.of(userId, normalizeModelId(modelId)));
         return ChatRoomResponse.of(chatRoom.getId(), null, chatRoom.getModelId(), null, chatRoom.getCreatedAt());
     }
 
@@ -72,7 +72,9 @@ public class ChatService {
     // 다른 요청의 사용자 메시지가 히스토리에 섞이고, 다른 방까지 허용하면 한 사용자가 Ollama를 독점한다)
     // 전송 횟수 제한(chat.rate-limit)을 넘으면 429로 거절한다.
     // 잠금 만료 시각(lockUntil)을 소유 토큰으로 써서, 만료 후 다른 요청이 잡은 잠금은 해제하지 않는다.
-    public ChatMessageResponse sendMessage(UUID userId, Long chatRoomId, String content, String modelId) {
+    public ChatMessageResponse sendMessage(UUID userId, Long chatRoomId, String content, String rawModelId) {
+        // modelId는 그대로 Ollama 모델명이 되므로 앞뒤 공백을 지운다. (요청 검증에서 공백만 있는 값은 이미 400)
+        String modelId = rawModelId.strip();
         PreparedMessage prepared = transactionTemplate.execute(status -> {
             // 같은 사용자의 전송을 직렬화한다. 다른 방 동시 전송이 둘 다 잠금을 얻거나 횟수 제한을 함께 통과하는 것을 막는다.
             userRepository.lockForChat(userId);
@@ -156,6 +158,10 @@ public class ChatService {
                 .collect(Collectors.toCollection(ArrayList::new));
         ollamaMessages.add(new OllamaMessage(toOllamaRole(ChatRole.USER), content));
         return ollamaMessages;
+    }
+
+    private String normalizeModelId(String modelId) {
+        return StringUtils.hasText(modelId) ? modelId.strip() : null;
     }
 
     private Duration sendLockTtl() {

@@ -125,6 +125,38 @@ class ChatServiceTest {
         assertThat(captor.getValue().getModelId()).isNull();
     }
 
+    @Test
+    @DisplayName("채팅방 생성 - modelId 앞뒤 공백은 지워서 저장한다")
+    void createChatRoom_trimsModelId() {
+        // given
+        when(chatRoomRepository.save(any(ChatRoom.class))).thenReturn(ChatRoom.of(CHAT_ROOM_ID, USER_ID, MODEL_ID));
+
+        // when
+        chatService.createChatRoom(USER_ID, " " + MODEL_ID + " ");
+
+        // then
+        ArgumentCaptor<ChatRoom> captor = ArgumentCaptor.forClass(ChatRoom.class);
+        verify(chatRoomRepository).save(captor.capture());
+        assertThat(captor.getValue().getModelId()).isEqualTo(MODEL_ID);
+    }
+
+    @Test
+    @DisplayName("전송 - modelId 앞뒤 공백을 지워 Ollama 호출과 모델 갱신에 사용한다")
+    void sendMessage_trimsModelId() {
+        // given
+        givenLockAcquired();
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenReturn(ChatMessage.of(3L, CHAT_ROOM_ID, ChatRole.USER, CONTENT, NOW));
+        when(ollamaClient.chat(eq(MODEL_ID), any())).thenReturn(AI_CONTENT);
+
+        // when
+        chatService.sendMessage(USER_ID, CHAT_ROOM_ID, CONTENT, " " + MODEL_ID + "\t");
+
+        // then
+        verify(ollamaClient).chat(eq(MODEL_ID), any());
+        verify(chatRoomRepository).completeSend(eq(CHAT_ROOM_ID), any(), eq(MODEL_ID), any());
+    }
+
     // 전송 잠금 획득 성공 상황을 만든다.
     private void givenLockAcquired() {
         when(chatRoomRepository.acquireSendLock(eq(CHAT_ROOM_ID), eq(USER_ID), any(), any())).thenReturn(1);

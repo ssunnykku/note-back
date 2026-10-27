@@ -1,6 +1,9 @@
 spring:
   profiles:
     active: dev
+  jpa:
+    # 요청 전체(Ollama 대기 포함)에 DB 커넥션이 묶이지 않도록 트랜잭션 범위에서만 커넥션을 사용한다.
+    open-in-view: false
   flyway:
     # 스키마 변경은 db/migration 의 V{n}__*.sql 로만 한다. 적용된 파일은 수정 금지(체크섬 불일치로 기동 실패).
     # Flyway 도입 전부터 테이블이 있던 DB는 V1(초기 스키마)을 적용된 것으로 간주하고 V2부터 실행한다.

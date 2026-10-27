@@ -69,6 +69,11 @@ public class ChatServiceIT {
     void setUp() {
         chatMessageRepository.deleteAll();
         chatRoomRepository.deleteAll();
+        // 전송 시 사용자 행을 잠그므로 실제 사용자 행이 있어야 한다.
+        jdbcTemplate.update("""
+                insert into users (id, name, email, password, created_at) values (?, ?, ?, ?, now())
+                on conflict (id) do nothing
+                """, USER_ID, "it-user", "chat-it@test.com", "x");
         roomId = chatRoomRepository.save(ChatRoom.of(USER_ID, "dev")).getId();
         when(ollamaClient.getMaxCallDuration()).thenReturn(Duration.ofSeconds(125));
     }
@@ -222,6 +227,93 @@ public class ChatServiceIT {
 
         assertThat(reloadRoom().getPendingUntil()).isEqualTo(LocalDateTime.of(2099, 1, 1, 0, 0));
         assertThat(reloadRoom().getModelId()).isEqualTo("dev");
+    }
+
+    @Test
+    void sendToOtherRoomWhileWaiting_isRejectedWith409() throws Exception {
+        Long otherRoomId = chatRoomRepository.save(ChatRoom.of(USER_ID, "dev")).getId();
+        CountDownLatch firstCallEntered = new CountDownLatch(1);
+        CountDownLatch releaseFirstCall = new CountDownLatch(1);
+        when(ollamaClient.chat(anyString(), any())).thenAnswer(invocation -> {
+            firstCallEntered.countDown();
+            releaseFirstCall.await(10, TimeUnit.SECONDS);
+            return "답변";
+        });
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> first = executor.submit(() -> chatService.sendMessage(USER_ID, roomId, "첫 질문", "dev"));
+            assertThat(firstCallEntered.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // 사용자당 동시 전송은 1건: 다른 방이어도 409
+            assertThatThrownBy(() -> chatService.sendMessage(USER_ID, otherRoomId, "다른 방 질문", "dev"))
+                    .hasMessage(ErrorCode.CHAT_IN_PROGRESS.getMessage());
+
+            releaseFirstCall.countDown();
+            first.get(10, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        // 첫 전송이 끝나면 다른 방에도 보낼 수 있다.
+        chatService.sendMessage(USER_ID, otherRoomId, "다른 방 질문", "dev");
+        assertThat(chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(otherRoomId)).hasSize(2);
+    }
+
+    @Test
+    void simultaneousSendsToDifferentRooms_onlyOneSucceeds() throws Exception {
+        Long otherRoomId = chatRoomRepository.save(ChatRoom.of(USER_ID, "dev")).getId();
+        when(ollamaClient.chat(anyString(), any())).thenAnswer(invocation -> {
+            Thread.sleep(500);
+            return "답변";
+        });
+
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Boolean>> results = List.of(roomId, otherRoomId).stream()
+                    .map(id -> executor.submit(() -> {
+                        start.await();
+                        try {
+                            chatService.sendMessage(USER_ID, id, "질문", "dev");
+                            return true;
+                        } catch (BusinessException e) {
+                            assertThat(e.getErrorCode()).isEqualTo(ErrorCode.CHAT_IN_PROGRESS);
+                            return false;
+                        }
+                    }))
+                    .toList();
+            start.countDown();
+
+            int succeeded = 0;
+            for (Future<Boolean> result : results) {
+                succeeded += result.get(10, TimeUnit.SECONDS) ? 1 : 0;
+            }
+            assertThat(succeeded).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void rateLimitExceeded_rejectsWith429_andReleasesLock() {
+        // 최근 2분 안에 보낸 사용자 메시지가 이미 10건 (기본 제한: 2분 10회)
+        for (int i = 0; i < 10; i++) {
+            chatMessageRepository.save(ChatMessage.of(roomId, ChatRole.USER, "이전 질문 " + i));
+        }
+
+        assertThatThrownBy(() -> chatService.sendMessage(USER_ID, roomId, "질문", "dev"))
+                .hasMessage(ErrorCode.CHAT_RATE_LIMITED.getMessage());
+        assertThat(messages()).hasSize(10);
+        assertThat(reloadRoom().getPendingUntil()).as("tx1 롤백으로 전송 잠금도 취소").isNull();
+
+        // 2분이 지난 메시지는 세지 않는다.
+        jdbcTemplate.update("update chat_messages set created_at = ? where chat_room_id = ?",
+                LocalDateTime.now().minusMinutes(3), roomId);
+        when(ollamaClient.chat(anyString(), any())).thenReturn("답변");
+
+        chatService.sendMessage(USER_ID, roomId, "질문", "dev");
+        assertThat(messages()).hasSize(12);
     }
 
     @Test

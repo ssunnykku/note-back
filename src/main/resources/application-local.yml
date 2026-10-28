@@ -20,3 +20,8 @@ ollama:
 
 cors:
   allowed-origins: http://localhost:5173
+
+# 아직 HTTPS가 없어 Secure 쿠키는 브라우저가 보내지 않는다. HTTPS 적용 시 이 설정을 지운다.
+auth:
+  refresh-token:
+    cookie-secure: false

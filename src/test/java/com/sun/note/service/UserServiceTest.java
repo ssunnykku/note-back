@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.sun.note.domain.entity.User;
 import com.sun.note.dto.LoginResponse;
+import com.sun.note.service.UserService.AuthResult;
 import com.sun.note.exception.BusinessException;
 import com.sun.note.exception.ErrorCode;
 import com.sun.note.repository.UserRepository;
@@ -37,6 +38,9 @@ public class UserServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private UserService userService;
@@ -63,16 +67,19 @@ public class UserServiceTest {
 
             when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
-            when(userRepository.save(any(User.class))).thenReturn(userResult);
+            when(userRepository.saveAndFlush(any(User.class))).thenReturn(userResult);
+            when(refreshTokenService.issue(USER_ID)).thenReturn("refreshToken");
 
             // when
-            LoginResponse res = userService.signUp(NAME, EMAIL, PASSWORD, PASSWORD);
+            AuthResult result = userService.signUp(NAME, EMAIL, PASSWORD, PASSWORD);
 
             // then
+            LoginResponse res = result.response();
             assertThat(res).isNotNull();
             assertThat(res.user().email()).isEqualTo(EMAIL);
+            assertThat(result.refreshToken()).isEqualTo("refreshToken");
             verify(passwordEncoder).encode(any());
-            verify(userRepository).save(any(User.class));
+            verify(userRepository).saveAndFlush(any(User.class));
 
         }
 
@@ -114,12 +121,15 @@ public class UserServiceTest {
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(userResult));
             when(passwordEncoder.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
             when(jwtUtil.generateToken(USER_ID.toString())).thenReturn("accessToken");
+            when(refreshTokenService.issue(USER_ID)).thenReturn("refreshToken");
 
             // when
-            LoginResponse res = userService.login(EMAIL, PASSWORD);
+            AuthResult result = userService.login(EMAIL, PASSWORD);
 
             // then
+            LoginResponse res = result.response();
             assertThat(res).isNotNull();
+            assertThat(result.refreshToken()).isEqualTo("refreshToken");
             assertThat(res.accessToken()).isEqualTo("accessToken");
             assertThat(res.user().email()).isEqualTo(EMAIL);
             verify(passwordEncoder).matches(PASSWORD, ENCODED_PASSWORD);
@@ -150,6 +160,57 @@ public class UserServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(ErrorCode.INVALID_PASSWORD.getMessage());
             verify(jwtUtil, never()).generateToken(any());
+            verify(refreshTokenService, never()).issue(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("토큰 갱신")
+    class Refresh {
+
+        @Test
+        @DisplayName("refresh 토큰을 회전하고 새 액세스 토큰과 사용자 정보를 반환한다")
+        void refresh_success() {
+            // given
+            when(refreshTokenService.rotate("oldRefresh"))
+                    .thenReturn(new RefreshTokenService.Rotated(USER_ID, "newRefresh"));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(createUser()));
+            when(jwtUtil.generateToken(USER_ID.toString())).thenReturn("newAccess");
+
+            // when
+            AuthResult result = userService.refresh("oldRefresh");
+
+            // then
+            assertThat(result.response().accessToken()).isEqualTo("newAccess");
+            assertThat(result.response().user().email()).isEqualTo(EMAIL);
+            assertThat(result.refreshToken()).isEqualTo("newRefresh");
+        }
+
+        @Test
+        @DisplayName("토큰의 사용자가 없으면 INVALID_REFRESH_TOKEN")
+        void refresh_userNotFound() {
+            // given
+            when(refreshTokenService.rotate("oldRefresh"))
+                    .thenReturn(new RefreshTokenService.Rotated(USER_ID, "newRefresh"));
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> userService.refresh("oldRefresh"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage(ErrorCode.INVALID_REFRESH_TOKEN.getMessage());
+        }
+    }
+
+    @Nested
+    @DisplayName("로그아웃")
+    class Logout {
+
+        @Test
+        @DisplayName("refresh 토큰을 폐기한다")
+        void logout_revokes() {
+            userService.logout("refresh");
+
+            verify(refreshTokenService).revoke("refresh");
         }
     }
 

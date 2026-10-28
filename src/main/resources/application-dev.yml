@@ -27,3 +27,8 @@ server:
 # nginx가 프론트/백엔드를 같은 origin으로 묶어서 서빙하므로 CORS 허용 불필요
 cors:
   allowed-origins: ""
+
+# 아직 HTTPS가 없어 Secure 쿠키는 브라우저가 보내지 않는다. HTTPS 적용 시 이 설정을 지운다.
+auth:
+  refresh-token:
+    cookie-secure: false

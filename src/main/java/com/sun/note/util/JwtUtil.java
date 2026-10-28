@@ -1,5 +1,6 @@
 package com.sun.note.util;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -42,5 +43,18 @@ public class JwtUtil {
             return null;
         }
     }
-    
+
+    // 서명은 올바르지만 만료된 토큰인지. 401 응답에서 "만료"(갱신 후 재시도 가능)와 "위조/형식 오류"를 구분하는 데 쓴다.
+    // jjwt는 서명 검증 후 만료를 확인하므로 위조 토큰은 ExpiredJwtException이 나지 않는다.
+    public boolean isExpired(String token) {
+        try {
+            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            return false;
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 }

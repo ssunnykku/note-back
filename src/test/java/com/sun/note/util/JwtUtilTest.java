@@ -106,4 +106,39 @@ public class JwtUtilTest {
             assertThat(validate).isNull();
         }
     }
+
+    @Nested
+    @DisplayName("만료 여부")
+    class IsExpired {
+
+        @Test
+        @DisplayName("서명이 올바르고 만료된 토큰이면 true")
+        void isExpired_expiredToken() {
+            String expiredToken = new JwtUtil(SECRET, 0).generateToken(USERID);
+
+            assertThat(jwtUtil.isExpired(expiredToken)).isTrue();
+        }
+
+        @Test
+        @DisplayName("유효한 토큰이면 false")
+        void isExpired_validToken() {
+            String token = jwtUtil.generateToken(USERID);
+
+            assertThat(jwtUtil.isExpired(token)).isFalse();
+        }
+
+        @Test
+        @DisplayName("다른 키로 서명된 만료 토큰은 만료가 아니라 위조로 본다")
+        void isExpired_expiredButInvalidSignature() {
+            String forged = new JwtUtil("Mfj6zEMpm3cbMQDPr/eYZlXNm07MERgQotg1qm824kw=", 0).generateToken(USERID);
+
+            assertThat(jwtUtil.isExpired(forged)).isFalse();
+        }
+
+        @Test
+        @DisplayName("형식이 잘못된 토큰이면 false")
+        void isExpired_malformed() {
+            assertThat(jwtUtil.isExpired("not.a.jwt")).isFalse();
+        }
+    }
 }

@@ -14,6 +14,10 @@ public enum ErrorCode {
     INVALID_EMAIL(HttpStatus.BAD_REQUEST, "등록된 이메일이 아닙니다."),
     EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 등록된 이메일입니다."),
 
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "액세스 토큰이 만료되었습니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "로그인이 만료되었습니다. 다시 로그인해 주세요."),
+
     VERSION_CONFLICT(HttpStatus.CONFLICT, "버전 충돌이 발생했습니다."),
     CHAT_IN_PROGRESS(HttpStatus.CONFLICT, "이전 메시지의 응답을 기다리는 중입니다."),
     CHAT_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "메시지를 너무 자주 보냈습니다. 잠시 후 다시 시도해 주세요."),

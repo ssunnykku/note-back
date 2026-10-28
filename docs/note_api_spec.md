@@ -1,11 +1,27 @@
 ## User
+- 공통 인증 에러 (모든 API): 인증이 필요한 요청에 유효한 액세스 토큰이 없으면 **401** ProblemDetail
+  (2026-10-28 변경, 기존 403 본문 없음). 경로가 없어도 인증이 먼저 검사된다.
+  - `title: TOKEN_EXPIRED`: 서명은 올바르지만 만료된 액세스 토큰 → `POST /api/auth/refresh` 후 원래 요청 재시도
+  - `title: UNAUTHORIZED`: 토큰 없음/위조/형식 오류 → 로그인 화면
+- refresh 토큰 쿠키: `refresh_token`, HttpOnly, SameSite=Strict, Path=`/api/auth`, Max-Age 7일
+  - local/dev는 HTTPS가 없어 Secure를 끈다(`auth.refresh-token.cookie-secure: false`). HTTPS 적용 시 켠다.
+  - DB(`refresh_tokens`)에는 SHA-256 해시만 저장. 로그인(기기)마다 따로 발급된다.
 - 로그인
-`POST /api/auth/login`
+`POST /api/auth/login` → 200 `{accessToken, user{name,email}}` + refresh 쿠키
 - 회원가입
-`POST /api/auth/signup`
-- 로그아웃
+`POST /api/auth/signup` → 201 (로그인과 같은 응답) + refresh 쿠키
 - 토큰 갱신
-`POST /api/auth/reissue`
+`POST /api/auth/refresh` (본문 없음, 쿠키만) → 200 `{accessToken, user{name,email}}` + **새** refresh 쿠키
+  - 쓸 때마다 새 토큰으로 바뀐다(회전). 마지막 갱신 후 7일 동안 쓰지 않으면 만료.
+  - 쿠키 없음/만료/이미 사용·로그아웃된 토큰 → 401 `INVALID_REFRESH_TOKEN`. **쿠키는 지우지 않는다**
+    (쿠키 저장소는 탭끼리 공유돼, 늦게 도착한 실패 응답이 다른 탭이 막 받은 새 쿠키를 지우면 모든 탭이 로그아웃되기 때문. 쿠키 삭제는 logout만)
+  - 쿠키 값은 디코딩하지 않고 그대로 비교한다(잘못된 % 인코딩도 401)
+  - 같은 토큰으로 동시에 갱신하면 한 요청만 성공하고 나머지는 401
+  - 한계: 재사용 탐지/절대 만료 없음. 7일 안에 계속 갱신하면 세션이 무기한 유지된다.
+- 세션: 서버는 HTTP 세션을 만들지 않는다(STATELESS, JSESSIONID 없음). subject가 UUID가 아닌 액세스 토큰은 401 UNAUTHORIZED.
+- 로그아웃
+`POST /api/auth/logout` → 204 + 쿠키 삭제. refresh 토큰을 폐기한다(쿠키가 없어도 204).
+  액세스 토큰은 서버에 상태가 없어 만료(최대 1시간)까지 유효하므로 프론트에서 지운다.
 
 ## Category
 - 카테고리 생성(복합키 userId, categoryId)
@@ -30,11 +46,11 @@
 - 복원
     `PATCH /api/notes/{id}/restore`
 - 완전 삭제
-    `DELETE /api/notes/{id}/restore`
+    `DELETE /api/notes/{id}/permanent`
 
 ## Chat (AI)
-- 공통 에러: 인증 없음/만료 403(본문 없음, 경로가 없어도 403), 매핑되지 않은 경로 404, 지원하지 않는 메서드 405,
-  경로 변수 타입 오류·검증 실패 400, Content-Type 누락 415. 403 외에는 ProblemDetail 형식.
+- 공통 에러: 인증 없음/만료 401(위 User 공통 인증 에러, 경로가 없어도 401), 매핑되지 않은 경로 404, 지원하지 않는 메서드 405,
+  경로 변수 타입 오류·검증 실패 400, Content-Type 누락 415. 모두 ProblemDetail 형식.
 - `createdAt`은 소수점 이하 초 자릿수가 응답마다 다르다. 생성/전송 응답은 서버 시각 그대로(Windows 7자리, Linux 최대 9자리),
   조회 응답은 DB에 저장된 값(마이크로초 6자리, 반올림)이라 같은 메시지라도 문자열이 다를 수 있다. 동일성 비교는 id로 한다.
 - 채팅방 생성 (id는 서버 발급)

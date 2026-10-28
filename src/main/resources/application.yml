@@ -23,3 +23,9 @@ chat:
   rate-limit:
     max-requests: 10    # 사용자별 window 동안 전송 가능 횟수
     window: 2m
+
+# 인증 (기본값은 AuthProperties)
+auth:
+  refresh-token:
+    ttl: 7d               # 마지막 갱신 후 이 기간 동안 사용하지 않으면 다시 로그인
+    cookie-secure: true   # HTTPS에서만 쿠키 전송. HTTPS가 없는 프로필(local/dev)에서 false로 덮어쓴다.

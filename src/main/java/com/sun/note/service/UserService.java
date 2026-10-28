@@ -19,9 +19,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
+
+    // response는 응답 본문, refreshToken은 컨트롤러가 HttpOnly 쿠키로만 내려준다.
+    public record AuthResult(LoginResponse response, String refreshToken) {
+    }
 
     @Transactional
-    public LoginResponse signUp(String name, String email, String password, String passwordConfirm) {
+    public AuthResult signUp(String name, String email, String password, String passwordConfirm) {
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
@@ -31,21 +36,39 @@ public class UserService {
         }
         String encodedPassword = passwordEncoder.encode(password);
 
-        User result = userRepository.save(User.of(name, email, encodedPassword));
-        String accessToken = jwtUtil.generateToken(result.getId().toString());
+        // refresh_tokens가 users를 참조하므로 토큰 저장 전에 사용자 insert를 먼저 반영한다.
+        User result = userRepository.saveAndFlush(User.of(name, email, encodedPassword));
 
-        return LoginResponse.of(accessToken, LoginResponse.UserInfo.of(result.getName(), result.getEmail()));
+        return issueTokens(result, refreshTokenService.issue(result.getId()));
     }
 
-    public LoginResponse login(String email, String password) {
+    public AuthResult login(String email, String password) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.INVALID_EMAIL));
 
         if (!user.checkPassword(password, passwordEncoder)) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
+        return issueTokens(user, refreshTokenService.issue(user.getId()));
+    }
+
+    @Transactional
+    public AuthResult refresh(String refreshToken) {
+        RefreshTokenService.Rotated rotated = refreshTokenService.rotate(refreshToken);
+        User user = userRepository.findById(rotated.userId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        return issueTokens(user, rotated.refreshToken());
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private AuthResult issueTokens(User user, String refreshToken) {
         String accessToken = jwtUtil.generateToken(user.getId().toString());
-        return LoginResponse.of(accessToken, LoginResponse.UserInfo.of(user.getName(), user.getEmail()));
+        LoginResponse response = LoginResponse.of(accessToken, LoginResponse.UserInfo.of(user.getName(), user.getEmail()));
+        return new AuthResult(response, refreshToken);
     }
 
 }

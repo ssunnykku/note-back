@@ -36,6 +36,9 @@
     - categoryId = null인 노트는 "미분류" 노트로 취급한다.
 
 ## Note
+- 소유자 검증 (2026-11-02): 조회/수정/휴지통 이동/복원/완전 삭제는 본인 노트만 가능하다.
+  다른 사용자의 노트 id면 없는 노트와 같이 404 `RESOURCE_NOT_FOUND` (존재 여부를 드러내지 않음).
+- 수정 시 `version`이 서버와 다르면 409 `VERSION_CONFLICT`. 다른 브라우저/탭에서 먼저 저장한 경우이므로 최신 노트를 다시 조회해야 한다.
 - 노트 생성 (categoryId 생략 시 미분류 저장)
     `POST /api/notes`
 - 노트 수정 (categoryId를 null로 수정하면 미분류 전환)

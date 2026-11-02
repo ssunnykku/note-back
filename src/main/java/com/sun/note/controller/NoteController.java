@@ -40,36 +40,43 @@ public class NoteController {
 
     // 수정
     @PutMapping("{id}")
-    ResponseEntity<NoteResponse> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto) {
-        NoteResponse note = noteService.editNote(id, dto.categoryId(), dto.title(), dto.content(), dto.version());
+    ResponseEntity<NoteResponse> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto,
+            Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        NoteResponse note = noteService.editNote(id, userId, dto.categoryId(), dto.title(), dto.content(),
+                dto.version());
         return ResponseEntity.ok(note);
     }
 
     // 조회
     @GetMapping("{id}")
-    ResponseEntity<NoteResponse> getNote(@PathVariable("id") Long id) {
-        NoteResponse note = noteService.getById(id);
+    ResponseEntity<NoteResponse> getNote(@PathVariable("id") Long id, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        NoteResponse note = noteService.getById(id, userId);
         return ResponseEntity.ok().body(note);
     }
 
     // 휴지통으로 이동 (soft delete)
     @DeleteMapping("{id}")
-    ResponseEntity<Void> softDeleteNote(@PathVariable("id") Long id) {
-        noteService.softDelete(id);
+    ResponseEntity<Void> softDeleteNote(@PathVariable("id") Long id, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        noteService.softDelete(id, userId);
         return ResponseEntity.noContent().build();
     }
 
     // 복원
     @PatchMapping("{id}/restore")
-    ResponseEntity<Void> restoreNote(@PathVariable("id") Long id) {
-        noteService.restore(id);
+    ResponseEntity<Void> restoreNote(@PathVariable("id") Long id, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        noteService.restore(id, userId);
         return ResponseEntity.noContent().build();
     }
 
     // 완전 삭제 (hard delete)
     @DeleteMapping("{id}/permanent")
-    ResponseEntity<Void> permanentDeleteNote(@PathVariable("id") Long id) {
-        noteService.permanentDelete(id);
+    ResponseEntity<Void> permanentDeleteNote(@PathVariable("id") Long id, Authentication auth) {
+        UUID userId = UUID.fromString(auth.getName());
+        noteService.permanentDelete(id, userId);
         return ResponseEntity.noContent().build();
     }
 

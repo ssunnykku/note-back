@@ -40,13 +40,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ChatService {
 
-    // 채팅 목록에 내려줄 제목/미리보기 최대 길이
     private static final int TITLE_MAX_LENGTH = 50;
     private static final int PREVIEW_MAX_LENGTH = 100;
 
-    // 전송 잠금 유지 시간 = Ollama 최대 호출 시간(connect + read timeout) + 여유분.
-    // 정상 진행 중인 요청의 잠금이 먼저 만료되어 다른 요청이 끼어드는 일이 없도록 timeout 설정에서 계산한다.
-    // (여유분: tx1/tx2의 커넥션 대기(Hikari 기본 30초) 등)
+    // 정상 요청의 잠금이 Ollama 응답 전에 풀리지 않도록 timeout에 더하는 여유분 (DB 커넥션 대기 등)
     private static final Duration SEND_LOCK_MARGIN = Duration.ofSeconds(60);
 
     private final ChatRoomRepository chatRoomRepository;
@@ -56,40 +53,29 @@ public class ChatService {
     private final TransactionTemplate transactionTemplate;
     private final ChatProperties chatProperties;
 
-    // 채팅방 생성 (id는 서버에서 발급)
     @Transactional
     public ChatRoomResponse createChatRoom(UUID userId, String modelId) {
-        // 앞뒤 공백은 지우고, 비어 있으면 "모델 미지정"(null)으로 취급한다.
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.of(userId, normalizeModelId(modelId)));
         return ChatRoomResponse.of(chatRoom.getId(), null, chatRoom.getModelId(), null, chatRoom.getCreatedAt());
     }
 
-    // Ollama 응답(최대 수십 초)을 기다리는 동안 DB 커넥션을 점유하지 않도록 트랜잭션을 나눈다.
-    //   tx1: 사용자 행 잠금 + 전송 잠금 획득(소유자 확인 포함) + 횟수 제한 확인 + 히스토리 조회 + 사용자 메시지 저장
-    //   (트랜잭션 밖) Ollama 호출
-    //   tx2: AI 메시지 저장 + 모델 갱신 + 잠금 해제
-    // Ollama 호출이나 tx2가 실패하면 사용자 메시지를 삭제하고 잠금을 풀어 "실패하면 아무것도 저장되지 않는다"를 유지한다.
-    // 사용자의 채팅방 중 응답 대기 중인 전송이 있으면 409로 거절한다. (같은 방에서 허용하면 아직 답이 없는
-    // 다른 요청의 사용자 메시지가 히스토리에 섞이고, 다른 방까지 허용하면 한 사용자가 Ollama를 독점한다)
-    // 전송 횟수 제한(chat.rate-limit)을 넘으면 429로 거절한다.
-    // 잠금 만료 시각(lockUntil)을 소유 토큰으로 써서, 만료 후 다른 요청이 잡은 잠금은 해제하지 않는다.
+    // Ollama 응답을 기다리는 동안 DB 커넥션을 잡지 않도록 트랜잭션을 둘로 나눈다.
+    // 사용자당 동시 전송은 1건: 같은 방이면 답 없는 메시지가 히스토리에 섞이고, 다른 방이면 Ollama를 독점한다.
     public ChatMessageResponse sendMessage(UUID userId, Long chatRoomId, String content, String rawModelId) {
-        // modelId는 그대로 Ollama 모델명이 되므로 앞뒤 공백을 지운다. (요청 검증에서 공백만 있는 값은 이미 400)
         String modelId = rawModelId.strip();
-        // TransactionTemplate.execute는 시그니처상 null을 반환할 수 있지만 두 콜백 모두 null을 반환하지 않는다.
         PreparedMessage prepared = Objects.requireNonNull(transactionTemplate.execute(status -> {
-            // 같은 사용자의 전송을 직렬화한다. 다른 방 동시 전송이 둘 다 잠금을 얻거나 횟수 제한을 함께 통과하는 것을 막는다.
+            // 다른 방 동시 전송이 둘 다 잠금을 얻거나 횟수 제한을 함께 통과하지 않도록 사용자 단위로 직렬화
             userRepository.lockForChat(userId);
 
             LocalDateTime now = LocalDateTime.now();
-            // DB(timestamp)는 마이크로초까지 저장하므로 맞춰 잘라야 해제 시 값 비교가 일치한다.
+            // DB가 마이크로초까지만 저장하므로, 해제 시 값 비교가 맞도록 잘라 둔다
             LocalDateTime lockUntil = now.plus(sendLockTtl()).truncatedTo(ChronoUnit.MICROS);
             if (chatRoomRepository.acquireSendLock(chatRoomId, userId, now, lockUntil) == 0) {
                 findOwnedChatRoom(userId, chatRoomId);
                 throw new BusinessException(ErrorCode.CHAT_IN_PROGRESS);
             }
 
-            // 예외로 끝나면 tx1이 롤백되어 위에서 잡은 전송 잠금도 함께 취소된다.
+            // 여기서 예외가 나면 tx1 롤백으로 위의 잠금도 취소된다
             ChatProperties.RateLimit rateLimit = chatProperties.rateLimit();
             if (chatMessageRepository.countByUserIdAndRoleSince(userId, ChatRole.USER,
                     now.minus(rateLimit.window())) >= rateLimit.maxRequests()) {
@@ -107,21 +93,20 @@ public class ChatService {
 
             ChatMessage aiMessage = Objects.requireNonNull(transactionTemplate.execute(status -> {
                 if (chatRoomRepository.completeSend(chatRoomId, prepared.lockUntil(), modelId, LocalDateTime.now()) == 0) {
-                    // 잠금이 만료되어 다른 요청이 가져간 경우. 그 요청의 잠금은 건드리지 않는다.
+                    // 잠금이 만료돼 다른 요청이 가져갔다. lockUntil이 다르므로 그 잠금은 건드리지 않는다
                     log.warn("전송 잠금이 만료된 뒤 응답 완료: chatRoomId={}", chatRoomId);
                 }
                 return chatMessageRepository.save(ChatMessage.of(chatRoomId, ChatRole.AI, aiContent));
             }));
             return ChatMessageResponse.from(aiMessage);
         } catch (Throwable e) {
-            // Error(OOM 등)에서도 사용자 메시지가 남지 않도록 Throwable 전체에 대해 보상한다.
+            // 실패하면 아무것도 남기지 않는다. Error(OOM 등)도 포함
             rollbackSend(chatRoomId, prepared, e);
             throw e;
         }
     }
 
-    // 보상 처리: 사용자 메시지 삭제 + 잠금 해제.
-    // 보상이 실패해도 원래 예외를 클라이언트에 전달한다. (잠금은 SEND_LOCK_TTL 후 자동 만료)
+    // 보상이 실패해도 원래 예외를 전달한다. 잠금은 lockUntil이 지나면 자동으로 풀린다
     private void rollbackSend(Long chatRoomId, PreparedMessage prepared, Throwable cause) {
         try {
             transactionTemplate.executeWithoutResult(status -> {
@@ -135,8 +120,7 @@ public class ChatService {
         }
     }
 
-    // 최근 메시지부터 거슬러 올라가며 개수(maxMessages)와 글자 수(maxChars, 새 메시지 포함) 안에 드는 만큼만
-    // 이전 대화로 보낸다. 대화가 AI 답변으로 시작하지 않도록 맨 앞의 AI 메시지는 뺀다.
+    // 모델 컨텍스트를 넘지 않도록 최근 대화만 보낸다. 대화가 AI 답변으로 시작하지 않게 맨 앞 AI 메시지는 뺀다
     private List<OllamaMessage> buildOllamaMessages(Long chatRoomId, String content) {
         ChatProperties.History limit = chatProperties.history();
         List<ChatMessage> recent = chatMessageRepository.findByChatRoomIdOrderByCreatedAtDescIdDesc(
@@ -173,7 +157,6 @@ public class ChatService {
     private record PreparedMessage(Long userMessageId, LocalDateTime lockUntil, List<OllamaMessage> ollamaMessages) {
     }
 
-    // 메시지 조회 (오래된 순)
     public List<ChatMessageResponse> getMessages(UUID userId, Long chatRoomId) {
         findOwnedChatRoom(userId, chatRoomId);
         return chatMessageRepository.findByChatRoomIdOrderByCreatedAtAscIdAsc(chatRoomId).stream()
@@ -181,8 +164,7 @@ public class ChatService {
                 .toList();
     }
 
-    // 채팅 목록 조회 (최신순)
-    // 제목은 별도 컬럼 없이 첫 사용자 메시지로, lastMessage는 가장 최근 메시지로 채운다.
+    // 제목은 별도 컬럼 없이 첫 사용자 메시지로 채운다
     public List<ChatRoomResponse> getChatRooms(UUID userId) {
         List<ChatRoom> chatRooms = chatRoomRepository.findByUserIdOrderByCreatedAtDescIdDesc(userId);
         if (chatRooms.isEmpty()) {
@@ -210,7 +192,7 @@ public class ChatService {
                 .collect(Collectors.toMap(ChatMessage::getChatRoomId, ChatMessage::getContent));
     }
 
-    // 코드포인트 단위로 자른다. (UTF-16 단위로 자르면 이모지 서로게이트 쌍이 깨진다)
+    // UTF-16 단위로 자르면 이모지(서로게이트 쌍)가 깨지므로 코드포인트 단위로 자른다
     private String truncate(String text, int maxLength) {
         if (text == null || text.codePointCount(0, text.length()) <= maxLength) {
             return text;
@@ -218,7 +200,7 @@ public class ChatService {
         return text.substring(0, text.offsetByCodePoints(0, maxLength));
     }
 
-    // 없는 채팅방과 다른 사용자의 채팅방을 구분하지 않고 모두 404로 응답한다.
+    // 다른 사용자의 채팅방은 존재 여부를 드러내지 않도록 없는 방과 같이 404
     private ChatRoom findOwnedChatRoom(UUID userId, Long chatRoomId) {
         return chatRoomRepository.findById(chatRoomId)
                 .filter(room -> room.getUserId().equals(userId))

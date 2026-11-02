@@ -19,8 +19,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     // 최근 메시지부터 (AI에 보낼 이전 대화 범위를 정할 때 사용)
     List<ChatMessage> findByChatRoomIdOrderByCreatedAtDescIdDesc(Long chatRoomId, Pageable pageable);
 
-    // 사용자의 모든 채팅방에서 since 이후 저장된 특정 role 메시지 수 (전송 횟수 제한)
-    // 실패한 전송은 보상 처리로 삭제되므로 세지 않는다.
+    // 실패한 전송은 보상 처리로 삭제되므로 횟수에 포함되지 않는다
     @Query("""
             select count(m) from ChatMessage m
             where m.role = :role and m.createdAt > :since

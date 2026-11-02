@@ -50,8 +50,7 @@ public class ChatRoom {
     @Column(nullable = false, name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 메시지 전송(AI 응답 대기) 중인 동안의 잠금 만료 시각. null이거나 지났으면 전송 가능.
-    // 서버가 응답 도중 죽어도 만료 후 자동으로 풀린다. 갱신은 ChatRoomRepository의 bulk update로만 한다.
+    // 전송 잠금 만료 시각. 서버가 응답 도중 죽어도 풀리도록 플래그 대신 시각을 쓴다. 갱신은 bulk update로만
     @Column(name = "pending_until")
     private LocalDateTime pendingUntil;
 

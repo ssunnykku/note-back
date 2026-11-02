@@ -14,10 +14,7 @@ import org.springframework.data.repository.query.Param;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     List<ChatRoom> findByUserIdOrderByCreatedAtDescIdDesc(UUID userId);
 
-    // 전송 잠금 획득. 본인 채팅방이고, 이 방을 포함해 사용자의 어떤 채팅방에도 응답 대기 중인 전송이
-    // 없으면(또는 만료) 1, 아니면 0. 사용자당 동시 전송은 1건이다.
-    // 같은 방 동시 요청은 이 UPDATE의 행 잠금으로, 다른 방 동시 요청은 호출 전 사용자 행 잠금
-    // (UserRepository.lockForChat)으로 직렬화되어 하나만 성공한다.
+    // 다른 방 동시 요청은 이 쿼리만으로는 둘 다 성공할 수 있어, 호출 전에 UserRepository.lockForChat이 필요하다
     @Modifying
     @Query("""
             update ChatRoom r set r.pendingUntil = :until
@@ -30,10 +27,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     int acquireSendLock(@Param("id") Long id, @Param("userId") UUID userId,
             @Param("now") LocalDateTime now, @Param("until") LocalDateTime until);
 
-    // 아래 두 쿼리는 획득 시 설정한 만료 시각(until)이 그대로일 때만, 즉 내 잠금일 때만 갱신한다.
-    // (내 잠금이 만료된 뒤 다른 요청이 새로 잡은 잠금을 풀지 않기 위해) 0이면 이미 잠금을 잃은 것이다.
-
-    // 전송 성공: 잠금 해제 + 모델 갱신
+    // 아래 두 쿼리는 until로 내 잠금인지 확인한다. 만료 후 다른 요청이 잡은 잠금을 풀지 않기 위해 (0이면 잠금을 잃음)
     @Modifying
     @Query("""
             update ChatRoom r set r.pendingUntil = null, r.modelId = :modelId, r.updatedAt = :now
@@ -42,7 +36,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     int completeSend(@Param("id") Long id, @Param("until") LocalDateTime until,
             @Param("modelId") String modelId, @Param("now") LocalDateTime now);
 
-    // 전송 실패: 잠금만 해제 (모델은 그대로)
     @Modifying
     @Query("update ChatRoom r set r.pendingUntil = null where r.id = :id and r.pendingUntil = :until")
     int releaseSendLock(@Param("id") Long id, @Param("until") LocalDateTime until);

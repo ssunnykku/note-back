@@ -33,7 +33,6 @@ public class CategoryController {
     private final CategoryService categoryService;
     private final CategoryNoteService categoryNoteService;
 
-    // 생성
     @PostMapping
     ResponseEntity<CategoryResponse> addCategory(
             @Valid @RequestBody CreateCategoryRequest dto,
@@ -43,7 +42,6 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(category);
     }
 
-    // 수정
     @PatchMapping("{id}")
     ResponseEntity<CategoryResponse> editCategory(
             @PathVariable("id") Long id,
@@ -54,7 +52,6 @@ public class CategoryController {
         return ResponseEntity.ok().body(category);
     }
 
-    // 조회(리스트)
     @GetMapping("notes")
     ResponseEntity<List<CategoryNoteDto>> getNoteList(
             Authentication auth,
@@ -64,7 +61,6 @@ public class CategoryController {
         return ResponseEntity.ok().body(list);
     }
 
-    // 노트 리스트 조회 by categoryId
     @GetMapping
     ResponseEntity<List<NoteResponse>> getNoteListByCategoryId(
             Authentication auth,

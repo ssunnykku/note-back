@@ -29,14 +29,12 @@ public class ChatController {
 
     private final ChatService chatService;
 
-    // 채팅 목록 조회 (최신순)
     @GetMapping
     ResponseEntity<List<ChatRoomResponse>> getChatRooms(Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
         return ResponseEntity.ok().body(chatService.getChatRooms(userId));
     }
 
-    // 채팅방 생성 (body 생략 가능)
     @PostMapping
     ResponseEntity<ChatRoomResponse> createChatRoom(
             @Valid @RequestBody(required = false) CreateChatRoomRequest dto,
@@ -46,7 +44,6 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.CREATED).body(chatService.createChatRoom(userId, modelId));
     }
 
-    // 메시지 조회 (오래된 순)
     @GetMapping("{chatId}/messages")
     ResponseEntity<List<ChatMessageResponse>> getMessages(
             @PathVariable("chatId") Long chatId,
@@ -55,7 +52,6 @@ public class ChatController {
         return ResponseEntity.ok().body(chatService.getMessages(userId, chatId));
     }
 
-    // 메시지 전송
     @PostMapping("{chatId}/messages")
     ResponseEntity<ChatMessageResponse> sendMessage(
             @PathVariable("chatId") Long chatId,

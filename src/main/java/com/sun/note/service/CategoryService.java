@@ -18,14 +18,12 @@ import lombok.RequiredArgsConstructor;
 public class CategoryService {
     private final CategoryRepository categoryRepository;
 
-    // 생성
     @Transactional
     public CategoryResponse addCategory(String name, UUID userId) {
         Category category = categoryRepository.save(Category.of(name, userId));
         return CategoryResponse.from(category);
     }
 
-    // 수정
     @Transactional
     public CategoryResponse editCategory(Long id, String name, UUID userId) {
         Category category = categoryRepository.findByIdAndUserId(id, userId)

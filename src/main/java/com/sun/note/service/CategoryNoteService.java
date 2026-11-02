@@ -19,13 +19,11 @@ public class CategoryNoteService {
     private final CategoryRepository categoryRepository;
     private final NoteRepository noteRepository;
 
-    // 카테고리별 노트 리스트 조회(전체)
     public List<CategoryNoteDto> getNoteList(UUID userId, boolean deleted) {
         List<CategoryNoteDto> noteList = categoryRepository.findCategoriesNotes(userId, deleted);
         return noteList;
     }
 
-    // 특정 카테고리의 노트 리스트 조회
     public List<NoteResponse> getNoteListByCategoryId(UUID userId, Long categoryId, boolean deleted) {
         List<Note> noteList = noteRepository.findByUserIdAndCategoryIdAndDeleted(userId, categoryId, deleted);
 

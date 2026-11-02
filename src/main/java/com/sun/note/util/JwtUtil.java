@@ -20,7 +20,6 @@ public class JwtUtil {
         this.accessExpired = accessExpired;
     }
 
-    // 토큰 생성
     public String generateToken(String username) {
         return Jwts.builder()
                 .subject(username) //  setSubject → subject
@@ -30,7 +29,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    // 토큰 검증
     public String validateToken(String token) {
         try {
             return Jwts.parser() // parserBuilder() → parser()

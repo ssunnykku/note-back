@@ -43,9 +43,8 @@ public class RefreshTokenService {
         return raw;
     }
 
-    // 사용한 토큰은 지우고 새 토큰을 발급한다. 한 번 쓴 토큰은 다시 쓸 수 없다.
-    // 한계: 탈취한 쪽이 먼저 갱신하면 그쪽 토큰이 유효하게 이어지고(정상 사용자만 401), 재사용을 탐지하거나
-    // 절대 만료(최초 로그인 기준 상한)를 두지는 않는다. 7일 안에 계속 갱신하면 세션이 무기한 유지된다.
+    // 한계: 재사용 탐지와 절대 만료가 없다. 탈취한 쪽이 먼저 갱신하면 그쪽 세션이 이어지고,
+    // ttl 안에 계속 갱신하면 세션이 무기한 유지된다.
     @Transactional
     public Rotated rotate(String raw) {
         if (raw == null || raw.isBlank()) {

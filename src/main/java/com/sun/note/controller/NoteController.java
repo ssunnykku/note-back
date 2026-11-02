@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 public class NoteController {
     private final NoteService noteService;
 
-    // 생성
     @PostMapping
     ResponseEntity<NoteResponse> addNote(@Valid @RequestBody CreateNoteRequest dto, Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
@@ -38,7 +37,6 @@ public class NoteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(note);
     }
 
-    // 수정
     @PutMapping("{id}")
     ResponseEntity<NoteResponse> editNote(@PathVariable("id") Long id, @Valid @RequestBody EditNoteRequest dto,
             Authentication auth) {
@@ -48,7 +46,6 @@ public class NoteController {
         return ResponseEntity.ok(note);
     }
 
-    // 조회
     @GetMapping("{id}")
     ResponseEntity<NoteResponse> getNote(@PathVariable("id") Long id, Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
@@ -56,7 +53,6 @@ public class NoteController {
         return ResponseEntity.ok().body(note);
     }
 
-    // 휴지통으로 이동 (soft delete)
     @DeleteMapping("{id}")
     ResponseEntity<Void> softDeleteNote(@PathVariable("id") Long id, Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
@@ -64,7 +60,6 @@ public class NoteController {
         return ResponseEntity.noContent().build();
     }
 
-    // 복원
     @PatchMapping("{id}/restore")
     ResponseEntity<Void> restoreNote(@PathVariable("id") Long id, Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());
@@ -72,7 +67,6 @@ public class NoteController {
         return ResponseEntity.noContent().build();
     }
 
-    // 완전 삭제 (hard delete)
     @DeleteMapping("{id}/permanent")
     ResponseEntity<Void> permanentDeleteNote(@PathVariable("id") Long id, Authentication auth) {
         UUID userId = UUID.fromString(auth.getName());

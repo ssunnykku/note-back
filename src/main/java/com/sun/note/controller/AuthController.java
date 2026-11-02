@@ -33,29 +33,24 @@ public class AuthController {
     private final UserService userService;
     private final AuthProperties authProperties;
 
-    // 로그인
     @PostMapping("login")
     ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest dto) {
         AuthResult result = userService.login(dto.email(), dto.password());
         return withRefreshCookie(HttpStatus.OK, result);
     }
 
-    // 회원가입
     @PostMapping("signup")
     ResponseEntity<LoginResponse> signup(@Valid @RequestBody SignupRequest dto) {
         AuthResult result = userService.signUp(dto.name(), dto.email(), dto.password(), dto.passwordConfirm());
         return withRefreshCookie(HttpStatus.CREATED, result);
     }
 
-    // 액세스 토큰 갱신. refresh 토큰도 새로 발급(회전)한다.
-    // 실패(401)해도 쿠키를 지우지 않는다. 쿠키 저장소는 탭끼리 공유되므로, 다른 탭이 먼저 회전해 받은 새 쿠키를
-    // 늦게 도착한 실패 응답이 지우면 두 탭 모두 로그아웃된다. 무효한 쿠키가 남아도 다음 refresh가 401을 받을 뿐이다.
+    // 실패해도 쿠키를 지우지 않는다. 늦게 온 실패 응답이 다른 탭이 막 받은 새 쿠키를 지워 모든 탭이 로그아웃되기 때문
     @PostMapping("refresh")
     ResponseEntity<LoginResponse> refresh(HttpServletRequest request) {
         return withRefreshCookie(HttpStatus.OK, userService.refresh(readRefreshCookie(request)));
     }
 
-    // 로그아웃. refresh 토큰을 폐기하고 쿠키를 지운다. 쿠키가 없어도 204. (액세스 토큰은 만료까지 유효)
     @PostMapping("logout")
     ResponseEntity<Void> logout(HttpServletRequest request) {
         userService.logout(readRefreshCookie(request));
@@ -64,8 +59,7 @@ public class AuthController {
                 .build();
     }
 
-    // @CookieValue는 값을 URL 디코딩하다 잘못된 % 시퀀스에서 예외(500)를 던지므로 원본 값을 그대로 읽는다.
-    // 발급하는 토큰은 base64url이라 디코딩이 필요 없다.
+    // @CookieValue는 잘못된 % 인코딩에서 500을 내므로 원본을 읽는다 (토큰은 base64url이라 디코딩 불필요)
     private static String readRefreshCookie(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, REFRESH_COOKIE);
         return cookie == null ? null : cookie.getValue();

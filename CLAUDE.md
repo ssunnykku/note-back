@@ -41,6 +41,13 @@ src/main/java/com/sun/note/
 - API를 추가하거나 바꾸면 `docs/note_api_spec.md`도 함께 갱신한다.
 - 기능 스펙 문서는 `issues/specs/`에 있다. 스펙과 구현이 다르면 사용자에게 먼저 확인한다.
 
+### 주석
+- 코드만 봐서는 알 수 없는 **이유**만 쓴다. 메서드/변수 이름, 에러 코드, 쿼리로 알 수 있는 내용(무엇을 하는지, 처리 순서)은 쓰지 않는다.
+  - 예: 왜 이 방식을 택했는지, 다른 방식이면 어떤 문제가 생기는지, 놓치기 쉬운 제약
+- 한 주석은 1~2줄로 짧게 쓴다. 더 길어지면 메서드로 나누거나 `docs/`로 옮긴다.
+- 여러 단계를 설명하는 긴 머리 주석 대신, 해당 코드 바로 위에 짧은 주석을 둔다.
+- 메서드 이름을 반복하는 라벨 주석(`// 생성`, `// 수정`)은 달지 않는다.
+
 ### CI / 정적 분석
 - CI(`.github/workflows/ci.yml`)는 `./gradlew test integrationTest spotbugsMain --continue`를 실행하고, dev push에서 통과하면 배포한다.
 - SpotBugs 경고가 하나라도 있으면 빌드가 실패한다. 오탐은 `config/spotbugs/exclude.xml`에 근거 주석과 함께 제외한다.

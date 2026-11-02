@@ -121,7 +121,7 @@ class NoteControllerTest {
         @DisplayName("유효한 요청이면 200 OK 반환")
         void editNote_success() throws Exception {
             NoteResponse response = NoteResponse.of(1L, USER_ID, 2L, "수정된 제목", "수정된 내용", NOW, NOW, 1L);
-            when(noteService.editNote(eq(1L), eq(2L), eq("수정된 제목"), eq("수정된 내용"), eq(1L)))
+            when(noteService.editNote(eq(1L), eq(USER_ID), eq(2L), eq("수정된 제목"), eq("수정된 내용"), eq(1L)))
                     .thenReturn(response);
 
             String body = """
@@ -149,7 +149,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("존재하지 않는 노트면 404 반환")
         void editNote_notFound() throws Exception {
-            when(noteService.editNote(eq(999L), any(), any(), any(), any()))
+            when(noteService.editNote(eq(999L), eq(USER_ID), any(), any(), any(), any()))
                     .thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             String body = """
@@ -176,7 +176,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("존재하는 노트면 200 OK 반환")
         void getNote_success() throws Exception {
-            when(noteService.getById(1L)).thenReturn(createNoteResponse());
+            when(noteService.getById(1L, USER_ID)).thenReturn(createNoteResponse());
 
             mockMvc.perform(get("/api/notes/1"))
                     .andExpect(status().isOk())
@@ -188,7 +188,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("존재하지 않는 노트면 404 반환")
         void getNote_notFound() throws Exception {
-            when(noteService.getById(999L))
+            when(noteService.getById(999L, USER_ID))
                     .thenThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
             mockMvc.perform(get("/api/notes/999"))
@@ -203,7 +203,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("존재하는 노트면 204 No Content 반환")
         void softDelete_success() throws Exception {
-            doNothing().when(noteService).softDelete(1L);
+            doNothing().when(noteService).softDelete(1L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/1").with(csrf()))
                     .andExpect(status().isNoContent());
@@ -213,7 +213,7 @@ class NoteControllerTest {
         @DisplayName("존재하지 않는 노트면 404 반환")
         void softDelete_notFound() throws Exception {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
-                    .when(noteService).softDelete(999L);
+                    .when(noteService).softDelete(999L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/999").with(csrf()))
                     .andExpect(status().isNotFound());
@@ -223,7 +223,7 @@ class NoteControllerTest {
         @DisplayName("이미 삭제된 노트면 400 반환")
         void softDelete_alreadyDeleted() throws Exception {
             doThrow(new BusinessException(ErrorCode.ALREADY_DELETED))
-                    .when(noteService).softDelete(1L);
+                    .when(noteService).softDelete(1L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/1").with(csrf()))
                     .andExpect(status().isBadRequest());
@@ -237,7 +237,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("삭제된 노트면 204 No Content 반환")
         void restore_success() throws Exception {
-            doNothing().when(noteService).restore(1L);
+            doNothing().when(noteService).restore(1L, USER_ID);
 
             mockMvc.perform(patch("/api/notes/1/restore").with(csrf()))
                     .andExpect(status().isNoContent());
@@ -247,7 +247,7 @@ class NoteControllerTest {
         @DisplayName("존재하지 않는 노트면 404 반환")
         void restore_notFound() throws Exception {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
-                    .when(noteService).restore(999L);
+                    .when(noteService).restore(999L, USER_ID);
 
             mockMvc.perform(patch("/api/notes/999/restore").with(csrf()))
                     .andExpect(status().isNotFound());
@@ -257,7 +257,7 @@ class NoteControllerTest {
         @DisplayName("삭제되지 않은 노트면 400 반환")
         void restore_notDeleted() throws Exception {
             doThrow(new BusinessException(ErrorCode.NOT_DELETED))
-                    .when(noteService).restore(1L);
+                    .when(noteService).restore(1L, USER_ID);
 
             mockMvc.perform(patch("/api/notes/1/restore").with(csrf()))
                     .andExpect(status().isBadRequest());
@@ -271,7 +271,7 @@ class NoteControllerTest {
         @Test
         @DisplayName("휴지통에 있는 노트면 204 No Content 반환")
         void permanentDelete_success() throws Exception {
-            doNothing().when(noteService).permanentDelete(1L);
+            doNothing().when(noteService).permanentDelete(1L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/1/permanent").with(csrf()))
                     .andExpect(status().isNoContent());
@@ -281,7 +281,7 @@ class NoteControllerTest {
         @DisplayName("존재하지 않는 노트면 404 반환")
         void permanentDelete_notFound() throws Exception {
             doThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
-                    .when(noteService).permanentDelete(999L);
+                    .when(noteService).permanentDelete(999L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/999/permanent").with(csrf()))
                     .andExpect(status().isNotFound());
@@ -291,7 +291,7 @@ class NoteControllerTest {
         @DisplayName("삭제되지 않은 노트면 400 반환")
         void permanentDelete_notDeleted() throws Exception {
             doThrow(new BusinessException(ErrorCode.NOT_DELETED))
-                    .when(noteService).permanentDelete(1L);
+                    .when(noteService).permanentDelete(1L, USER_ID);
 
             mockMvc.perform(delete("/api/notes/1/permanent").with(csrf()))
                     .andExpect(status().isBadRequest());
@@ -461,7 +461,7 @@ class NoteControllerTest {
         @DisplayName("categoryId가 null이어도 통과 (선택 필드)")
         void nullCategoryId_allowed() throws Exception {
             NoteResponse response = NoteResponse.of(1L, USER_ID, null, "제목", "내용", NOW, NOW, 1L);
-            when(noteService.editNote(eq(1L), eq(null), eq("제목"), eq("내용"), eq(1L)))
+            when(noteService.editNote(eq(1L), eq(USER_ID), eq(null), eq("제목"), eq("내용"), eq(1L)))
                     .thenReturn(response);
 
             String body = """

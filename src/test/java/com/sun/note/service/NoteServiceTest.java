@@ -35,6 +35,7 @@ public class NoteServiceTest {
     private NoteService noteService;
 
     private static final UUID USER_ID = UUID.fromString("2013a306-9369-46ba-ac55-2f547ac5c50f");
+    private static final UUID OTHER_USER_ID = UUID.fromString("7c1f0e4a-2b3d-4e5f-8a9b-0c1d2e3f4a5b");
     private static final Long CATEGORY_ID = 1L;
     private static final String TITLE = "첫번째 노트";
     private static final String CONTENT = "#내용";
@@ -92,7 +93,7 @@ public class NoteServiceTest {
         when(noteRepository.saveAndFlush(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        NoteResponse result = noteService.editNote(note.getId(), CATEGORY_ID, "첫번째 노트 수정", "#내용 수정", note.getVersion());
+        NoteResponse result = noteService.editNote(note.getId(), USER_ID, CATEGORY_ID, "첫번째 노트 수정", "#내용 수정", note.getVersion());
 
         // then
         assertThat(result).isNotNull();
@@ -118,7 +119,7 @@ public class NoteServiceTest {
         });
 
         // when
-        NoteResponse result = noteService.editNote(note.getId(), CATEGORY_ID, "수정", "#수정", originalVersion);
+        NoteResponse result = noteService.editNote(note.getId(), USER_ID, CATEGORY_ID, "수정", "#수정", originalVersion);
 
         // then - 수정 후 응답 version은 요청 version보다 커야 한다
         assertThat(result.version()).isEqualTo(originalVersion + 1);
@@ -129,7 +130,7 @@ public class NoteServiceTest {
     void testEditNoteException() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, 0L))
+        assertThatThrownBy(() -> noteService.editNote(1L, USER_ID, CATEGORY_ID, TITLE, CONTENT, 0L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
 
@@ -140,10 +141,79 @@ public class NoteServiceTest {
     void testFindByIdException() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.getById(1L))
+        assertThatThrownBy(() -> noteService.getById(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
 
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 노트 완전 삭제 시 RESOURCE_NOT_FOUND")
+    void testPermanentDeleteOtherUsersNote() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.permanentDelete(1L, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 노트 복원 시 RESOURCE_NOT_FOUND")
+    void testRestoreOtherUsersNote() {
+        // given
+        Note note = createNote();
+        note.softDelete();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.restore(1L, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+        assertThat(note.getDeleted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 노트 soft delete 시 RESOURCE_NOT_FOUND")
+    void testSoftDeleteOtherUsersNote() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.softDelete(1L, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+        assertThat(note.getDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 노트 수정 시 RESOURCE_NOT_FOUND")
+    void testEditOtherUsersNote() {
+        // given
+        Note note = createNote();
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // then
+        assertThatThrownBy(() -> noteService.editNote(1L, OTHER_USER_ID, CATEGORY_ID, "탈취", "탈취", 0L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+        assertThat(note.getTitle()).isEqualTo(TITLE);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 노트 조회 시 RESOURCE_NOT_FOUND")
+    void testGetOtherUsersNote() {
+        // given
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(createNote()));
+
+        // then
+        assertThatThrownBy(() -> noteService.getById(1L, OTHER_USER_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -155,7 +225,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.getById(1L))
+        assertThatThrownBy(() -> noteService.getById(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }
@@ -169,7 +239,7 @@ public class NoteServiceTest {
 
         // then
         Long wrongVersion = 999L;
-        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, wrongVersion))
+        assertThatThrownBy(() -> noteService.editNote(1L, USER_ID, CATEGORY_ID, TITLE, CONTENT, wrongVersion))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.VERSION_CONFLICT.getMessage());
     }
@@ -183,7 +253,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.editNote(1L, CATEGORY_ID, TITLE, CONTENT, 0L))
+        assertThatThrownBy(() -> noteService.editNote(1L, USER_ID, CATEGORY_ID, TITLE, CONTENT, 0L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }
@@ -196,7 +266,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // when
-        noteService.softDelete(1L);
+        noteService.softDelete(1L, USER_ID);
 
         // then
         assertThat(note.getDeleted()).isTrue();
@@ -212,7 +282,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.softDelete(1L))
+        assertThatThrownBy(() -> noteService.softDelete(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.ALREADY_DELETED.getMessage());
     }
@@ -222,7 +292,7 @@ public class NoteServiceTest {
     void testSoftDeleteNotFound() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.softDelete(1L))
+        assertThatThrownBy(() -> noteService.softDelete(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }
@@ -236,7 +306,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // when
-        noteService.restore(1L);
+        noteService.restore(1L, USER_ID);
 
         // then
         assertThat(note.getDeleted()).isFalse();
@@ -251,7 +321,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.restore(1L))
+        assertThatThrownBy(() -> noteService.restore(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.NOT_DELETED.getMessage());
     }
@@ -265,7 +335,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // when
-        noteService.permanentDelete(1L);
+        noteService.permanentDelete(1L, USER_ID);
 
         // then
         verify(noteRepository).delete(note);
@@ -279,7 +349,7 @@ public class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
 
         // then
-        assertThatThrownBy(() -> noteService.permanentDelete(1L))
+        assertThatThrownBy(() -> noteService.permanentDelete(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.NOT_DELETED.getMessage());
     }
@@ -289,7 +359,7 @@ public class NoteServiceTest {
     void testPermanentDeleteNotFound() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> noteService.permanentDelete(1L))
+        assertThatThrownBy(() -> noteService.permanentDelete(1L, USER_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessage());
     }

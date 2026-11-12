@@ -418,13 +418,17 @@ class NoteControllerTest {
         }
 
         @Test
-        @DisplayName("content가 빈 문자열이면 400 반환")
-        void blankContent() throws Exception {
+        @DisplayName("content가 빈 문자열이어도 통과 (@NotNull) - 빈 메모의 제목만 수정")
+        void blankContent_allowed() throws Exception {
+            NoteResponse response = NoteResponse.of(1L, USER_ID, 1L, "제목", "", NOW, NOW, 2L);
+            when(noteService.editNote(eq(1L), eq(USER_ID), eq(1L), eq("제목"), eq(""), eq(1L)))
+                    .thenReturn(response);
+
             String body = """
                     {
                         "categoryId": 1,
                         "title": "제목",
-                        "content": "   ",
+                        "content": "",
                         "version": 1
                     }
                     """;
@@ -433,7 +437,7 @@ class NoteControllerTest {
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk());
         }
 
         @Test

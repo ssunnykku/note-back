@@ -114,11 +114,11 @@ class EditNoteRequestValidationTest {
         }
 
         @Test
-        @DisplayName("빈 문자열이면 실패")
+        @DisplayName("빈 문자열이어도 통과 (@NotNull) - 빈 메모의 제목만 수정하는 경우")
         void blankContent() {
-            var request = EditNoteRequest.of(VALID_CATEGORY_ID, VALID_TITLE, "  ", 1L);
+            var request = EditNoteRequest.of(VALID_CATEGORY_ID, VALID_TITLE, "", 1L);
             Set<ConstraintViolation<EditNoteRequest>> violations = validator.validate(request);
-            assertThat(violations).isNotEmpty();
+            assertThat(violations).isEmpty();
         }
 
         @Test

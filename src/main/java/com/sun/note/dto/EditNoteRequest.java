@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 public record EditNoteRequest(
         Long categoryId,
         @NotBlank @Size(max = 255) String title,
-        @NotBlank @Size(max = 100000) String content,
+        @NotNull @Size(max = 100000) String content,
         @NotNull Long version) {
 
     public static EditNoteRequest of(Long categoryId, String title, String content, Long version) {
